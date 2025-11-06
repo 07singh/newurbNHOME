@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/emoloyee_file/profile_screen.dart';
+import 'EmployeeDashboard/attendenceCheckIn.dart';
 import 'today_flowup_page.dart';
 import 'week_flowup_page.dart';
 import 'total_flowup_page.dart';
@@ -180,11 +181,12 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.access_time, color: Colors.blue),
               title: const Text('Attendance', style: TextStyle(fontWeight: FontWeight.w500)),
               onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Attendance clicked')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AttendanceCheckIn()),
                 );
               },
+
             ),
             ListTile(
               leading: const Icon(Icons.fact_check, color: Colors.green),
@@ -300,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 12),
                   _buildFlowUpButton(
                     context,
-                    "Total Follow-up",
+                    "Staff Add",
                     Icons.list_alt_rounded,
                     Colors.green,
                     LinearGradient(colors: [Colors.green, Colors.lightGreen]),

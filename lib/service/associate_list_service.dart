@@ -1,48 +1,23 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '/Model/associate_list_model.dart'; // Adjust path to your model file
+import '/Model/associate_list_model.dart';
 
 class AssociateService {
-  final String _baseUrl = 'https://realapp.cheenu.in/Api/AssociateList';
-  final Duration _timeoutDuration = Duration(seconds: 30); // Request timeout
+  final String _baseUrl = 'https://realapp.cheenu.in/api/AssociateList/get';
 
-  Future<AssociateList> fetchAssociateList({
-    required String phone,
-    String? authToken,
-    Map<String, String>? additionalQueryParams,
-  }) async {
+  Future<AssociateList> fetchAssociateList({required String phone}) async {
     try {
-      // Build query parameters
-      final queryParams = {'phone': phone, ...?additionalQueryParams};
-      final uri = Uri.parse(_baseUrl).replace(queryParameters: queryParams);
+      final uri = Uri.parse("$_baseUrl?phone=$phone");
+      final response = await http.get(uri);
 
-      // Set headers
-      final headers = {
-        'Content-Type': 'application/json',
-        if (authToken != null) 'Authorization': 'Bearer $authToken',
-      };
-
-      // Make HTTP GET request with timeout
-      final response = await http.get(uri, headers: headers).timeout(
-        _timeoutDuration,
-        onTimeout: () => throw Exception('Request timed out after ${_timeoutDuration.inSeconds} seconds'),
-      );
-
-      // Handle response
-      switch (response.statusCode) {
-        case 200:
-          return AssociateList.fromJson(jsonDecode(response.body));
-        case 401:
-          throw Exception('Unauthorized: Invalid or missing authentication token');
-        case 404:
-          throw Exception('API endpoint not found');
-        case 500:
-          throw Exception('Server error: Please try again later');
-        default:
-          throw Exception('Failed to load associates: ${response.statusCode} - ${response.reasonPhrase}');
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        return AssociateList.fromJson(jsonResponse);
+      } else {
+        throw Exception('Failed to load associates: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Error fetching associates: ${e.toString()}');
+      throw Exception('Error fetching associates: $e');
     }
   }
 }

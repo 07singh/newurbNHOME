@@ -12,6 +12,7 @@ import '/DirectLogin/add_day_history_screen.dart';
 import '/emoloyee_file/booking_request.dart';
 import '/Employ.dart';
 import '/provider/user_provider.dart';
+import'/DirectLogin/add_staff.dart';
 
 class DirectloginPage extends StatefulWidget {
   final String? userName; // ✅ Added
@@ -602,7 +603,7 @@ class _DirectloginPageState extends State<DirectloginPage>
                   "Add Employee",
                   Icons.person_add_alt_1_rounded,
                   Color(0xFFFFD700),
-                  onTap: () => _navigateTo(const AddAssociateScreen()),
+                  onTap: () => _navigateTo(const AddStaffScreen()),
                 ),
                 const SizedBox(width: 12),
                 _buildActionButton(

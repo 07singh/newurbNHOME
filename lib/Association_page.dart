@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:testsd_app/HomeScreen.dart';
-import 'associate_book.dart'; // Ensure this import path is correct
 import '/Add_associate/associate_profile_screen.dart';
 import '/signin_role/sign_role_associate.dart';
-import'/plot_screen/book_plot.dart';
+import '/plot_screen/book_plot.dart';
+import '/asscoiate_plot_scren/book_plot.dart';
+import '/screens/add_visit_screen.dart';           // NEW
+import '/screens/total_visits_screen.dart';         // NEW
+import '/screens/total_commission_screen.dart';       // NEW
+import '/screens/commission_received_screen.dart';   // NEW
+import '/screens/book_plot_screen.dart';
+import'/screens/commission_received_screen.dart';
 
 class AssociateDashboardPage extends StatefulWidget {
-  final String userName; // Required parameter for user's name
-  final String userRole; // Required parameter for user's role
-  final String? profileImageUrl; // Optional parameter for profile image
-  final String phone; // Existing phone parameter
+  final String userName;
+  final String userRole;
+  final String? profileImageUrl;
+  final String phone;
 
   const AssociateDashboardPage({
     super.key,
@@ -24,7 +29,6 @@ class AssociateDashboardPage extends StatefulWidget {
 }
 
 class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
-  // State variables to hold mutable user details
   late String _userName;
   late String _userRole;
   String? _profileImageUrl;
@@ -54,13 +58,11 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
   @override
   void initState() {
     super.initState();
-    // Initialize state variables from widget parameters
     _userName = widget.userName;
     _userRole = widget.userRole;
     _profileImageUrl = widget.profileImageUrl;
   }
 
-  // Method to navigate to profile screen and update details on return
   Future<void> _navigateToProfile() async {
     final result = await Navigator.push(
       context,
@@ -72,7 +74,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       setState(() {
         _userName = result['name'] ?? _userName;
         _userRole = result['position'] ?? _userRole;
-        _profileImageUrl = result['profileImageUrl']; // Optional: updates if provided
+        _profileImageUrl = result['profileImageUrl'];
       });
     }
   }
@@ -125,7 +127,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
   ];
 
   void _handleDrawerItemClick(String title) {
-    Navigator.pop(context); // Close drawer
+    Navigator.pop(context);
 
     if (title == "Logout") {
       Navigator.of(context).pushAndRemoveUntil(
@@ -135,16 +137,13 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     } else if (title == "My Booking") {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const BookPlotScreen()),
+        MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()),
       );
     } else if (title == "My profile") {
-      _navigateToProfile(); // Navigate to profile and await updates
+      _navigateToProfile();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$title clicked"),
-          backgroundColor: Colors.deepPurple,
-        ),
+        SnackBar(content: Text("$title clicked"), backgroundColor: Colors.deepPurple),
       );
     }
   }
@@ -161,30 +160,16 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          "Associate Dashboard",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: const Text("Associate Dashboard", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         centerTitle: true,
         backgroundColor: Colors.deepPurple,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
-            tooltip: 'Refresh Data',
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData, tooltip: 'Refresh Data'),
           IconButton(
             icon: const Icon(Icons.notifications),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('No new notifications')),
-              );
-            },
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No new notifications'))),
             tooltip: 'Notifications',
           ),
         ],
@@ -206,38 +191,22 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add new visit/booking')),
-          );
-        },
+        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add new visit/booking'))),
         backgroundColor: Colors.deepPurple,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
+  // DUMMY PHOTO + API NAME
   Widget _buildWelcomeHeader() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.deepPurple.shade600,
-            Colors.purple.shade400,
-          ],
-        ),
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple.shade600, Colors.purple.shade400]),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.deepPurple.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
@@ -250,7 +219,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               image: DecorationImage(
                 image: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                     ? NetworkImage(_profileImageUrl!)
-                    : const AssetImage('assets/default_profile.png') as ImageProvider,
+                    : const AssetImage('assets/download (1).jpeg') as ImageProvider, // DUMMY PHOTO
                 fit: BoxFit.cover,
               ),
             ),
@@ -260,53 +229,23 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Welcome back!",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                const Text("Welcome back!", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text(
-                  _userName,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(_userName, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold)), // API NAME
                 const SizedBox(height: 4),
-                Text(
-                  _userRole,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
-                  ),
-                ),
+                Text(_userRole, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.star, color: Colors.yellow.shade400, size: 16),
                 const SizedBox(width: 4),
-                Text(
-                  "4.8 Rating",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text("4.8 Rating", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -315,72 +254,29 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  // ... (Other methods like _buildPerformanceStats, _buildDashboardGrid, _buildRecentActivities remain unchanged)
-
   Widget _buildPerformanceStats() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Performance Metrics",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.deepPurple,
-          ),
-        ),
+        const Text("Performance Metrics", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple)),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.8,
-          ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.8),
           itemCount: _performanceStats.length,
           itemBuilder: (context, index) {
             final stat = _performanceStats[index];
             return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    value: stat['progress'] as double,
-                    backgroundColor: Colors.grey.shade200,
-                    color: stat['color'] as Color,
-                    strokeWidth: 6,
-                  ),
+                  CircularProgressIndicator(value: stat['progress'] as double, backgroundColor: Colors.grey.shade200, color: stat['color'] as Color, strokeWidth: 6),
                   const SizedBox(height: 12),
-                  Text(
-                    stat['value'] as String,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: stat['color'] as Color,
-                    ),
-                  ),
+                  Text(stat['value'] as String, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: stat['color'] as Color)),
                   const SizedBox(height: 4),
-                  Text(
-                    stat['label'] as String,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
+                  Text(stat['label'] as String, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                 ],
               ),
             );
@@ -394,41 +290,43 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Quick Overview",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.deepPurple,
-          ),
-        ),
+        const Text("Quick Overview", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple)),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 1.3,
-          ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.3),
           itemCount: items.length,
           itemBuilder: (context, index) {
             final item = items[index];
             return DashboardCard(
               item: item,
               onTap: () {
+                // NEW NAVIGATION LOGIC
                 if (item.title == "My Booking") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()));
+                }
+                else if (item.title == "Book Plot") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreen()));
+                }
+                else if (item.title == "Add Visit") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const TotalBookingListScreen()));
+                }
+
+
+                else if (item.title == "Commission Received") {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const BookPlotScreen()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("${item.title} clicked"),
-                      backgroundColor: item.color,
+                    MaterialPageRoute(
+                      builder: (context) => CommissionListScreen(
+                       // Replace with actual phone variable
+                      ),
                     ),
+                  );
+                }
+                else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("${item.title} clicked"), backgroundColor: item.color),
                   );
                 }
               },
@@ -443,56 +341,21 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Recent Activities",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.deepPurple,
-          ),
-        ),
+        const Text("Recent Activities", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple)),
         const SizedBox(height: 12),
         Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]),
           child: Column(
             children: _recentActivities.map((activity) {
               return ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: (activity['color'] as Color).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    activity['icon'] as IconData,
-                    color: activity['color'] as Color,
-                    size: 20,
-                  ),
+                  decoration: BoxDecoration(color: (activity['color'] as Color).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: Icon(activity['icon'] as IconData, color: activity['color'] as Color, size: 20),
                 ),
-                title: Text(
-                  activity['type'] as String,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                title: Text(activity['type'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
                 subtitle: Text(activity['description'] as String),
-                trailing: Text(
-                  activity['time'] as String,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
+                trailing: Text(activity['time'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
               );
             }).toList(),
           ),
@@ -501,27 +364,19 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
+  // DUMMY PHOTO + API NAME + PHONE NUMBER
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF667eea), Color(0xFF764ba2)]),
         ),
         child: Column(
           children: [
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.shade800,
-              ),
+              decoration: BoxDecoration(color: Colors.deepPurple.shade800),
               child: Column(
                 children: [
                   Container(
@@ -533,42 +388,20 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                       image: DecorationImage(
                         image: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                             ? NetworkImage(_profileImageUrl!)
-                            : const AssetImage('assets/default_profile.png') as ImageProvider,
+                            : const AssetImage('assets/download (1).jpeg') as ImageProvider, // DUMMY PHOTO
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
                   const SizedBox(height: 15),
-                  Text(
-                    _userName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), // API NAME
                   const SizedBox(height: 5),
-                  Text(
-                    _userRole,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                    ),
-                  ),
+                  Text(widget.phone, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)), // PHONE NUMBER
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      "Premium Associate",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
-                    ),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                    child: const Text("Premium Associate", style: TextStyle(color: Colors.white, fontSize: 12)),
                   ),
                 ],
               ),
@@ -605,13 +438,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                 children: [
                   const Divider(color: Colors.white54),
                   const SizedBox(height: 8),
-                  Text(
-                    "RealEstate Pro v1.0.0",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text("RealEstate Pro v1.0.0", style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
                 ],
               ),
             ),
@@ -627,15 +454,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.2,
-            ),
-          ),
+          child: Text(title, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
         ),
         ...children,
       ],
@@ -646,27 +465,17 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: color, size: 20),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
       trailing: const Icon(Icons.chevron_right, color: Colors.white54, size: 18),
       onTap: () => _handleDrawerItemClick(title),
     );
   }
 }
 
-// DashboardItem and DashboardCard classes remain unchanged
+// DashboardItem and DashboardCard (unchanged)
 class DashboardItem {
   final String title;
   final IconData icon;
@@ -698,23 +507,10 @@ class DashboardCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              item.color.withOpacity(0.1),
-              item.color.withOpacity(0.05),
-            ],
-          ),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [item.color.withOpacity(0.1), item.color.withOpacity(0.05)]),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: item.color.withOpacity(0.3), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 3))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -727,35 +523,18 @@ class DashboardCard extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: item.color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    decoration: BoxDecoration(color: item.color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
                     child: Icon(item.icon, color: item.color, size: 20),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: item.growth >= 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    decoration: BoxDecoration(color: item.growth >= 0 ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          item.growth >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                          color: item.growth >= 0 ? Colors.green : Colors.red,
-                          size: 12,
-                        ),
+                        Icon(item.growth >= 0 ? Icons.arrow_upward : Icons.arrow_downward, color: item.growth >= 0 ? Colors.green : Colors.red, size: 12),
                         const SizedBox(width: 2),
-                        Text(
-                          "${item.growth.abs().toStringAsFixed(1)}%",
-                          style: TextStyle(
-                            color: item.growth >= 0 ? Colors.green : Colors.red,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        Text("${item.growth.abs().toStringAsFixed(1)}%", style: TextStyle(color: item.growth >= 0 ? Colors.green : Colors.red, fontSize: 10, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -767,21 +546,10 @@ class DashboardCard extends StatelessWidget {
                 children: [
                   Text(
                     item.isCurrency ? "₹${_formatCurrency(item.count)}" : item.count.toString(),
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: item.color,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: item.color),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    item.title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(item.title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
                 ],
               ),
             ],
@@ -792,11 +560,8 @@ class DashboardCard extends StatelessWidget {
   }
 
   String _formatCurrency(int amount) {
-    if (amount >= 100000) {
-      return '${(amount / 100000).toStringAsFixed(1)}L';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)}K';
-    }
+    if (amount >= 100000) return '${(amount / 100000).toStringAsFixed(1)}L';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}K';
     return amount.toString();
   }
 }

@@ -30,6 +30,7 @@ class PlotInfo {
   BookingStatus bookingStatus = BookingStatus.available;
   String plotType;
 
+
   // मुख्य कंस्ट्रक्टर
   PlotInfo({
     required this.id,
@@ -269,8 +270,8 @@ class _BookingDialogState extends State<BookingDialog> {
   late TextEditingController _areaController;
   late TextEditingController _bookedAreaController;
   late TextEditingController _remainingAreaController;
-  late TextEditingController _purchasePriceController; // ← was fare
-  late TextEditingController _receivingController;     // ← was paid
+  late TextEditingController _purchasePriceController;
+  late TextEditingController _receivingController;
   late TextEditingController _projectController;
   late TextEditingController _pendingController;
   late TextEditingController _paidThroughController;
@@ -290,7 +291,6 @@ class _BookingDialogState extends State<BookingDialog> {
   final _formKey = GlobalKey<FormState>();
   double _totalAmount = 0;
 
-  // Dropdown options
   final List<String> _paidThroughOptions = ['Cash', 'Online Transfer', 'Cheque'];
   String _selectedPaidThrough = 'Online Transfer';
 
@@ -325,22 +325,25 @@ class _BookingDialogState extends State<BookingDialog> {
     _updateTotalAmount();
   }
 
+  // FIXED: Sync area string when unit changes
   void _updateRemainingArea() {
     final total = double.tryParse(_areaController.text) ?? 0;
     final booked = double.tryParse(_bookedAreaController.text) ?? 0;
-    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1/9.0 : 1.0;
+    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
     final totalInYds = total * unitFactor;
     final remaining = totalInYds - booked;
 
     setState(() {
       _remainingAreaController.text = remaining.toStringAsFixed(0);
+      // CRITICAL FIX: Keep area string in sync with current unit
+      _areaController.text = total.toStringAsFixed(0);
     });
   }
 
   void _updateTotalAmount() {
     final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0;
     final bookedArea = double.tryParse(_bookedAreaController.text) ?? 0;
-    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1/9.0 : 1.0;
+    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
     final bookedInYds = bookedArea * unitFactor;
 
     setState(() {
@@ -629,7 +632,7 @@ class _BookingDialogState extends State<BookingDialog> {
                               if (v != null) {
                                 setState(() {
                                   _areaUnit = v;
-                                  _updateRemainingArea();
+                                  _updateRemainingArea(); // Now syncs area string
                                   _updateTotalAmount();
                                 });
                               }
@@ -654,7 +657,7 @@ class _BookingDialogState extends State<BookingDialog> {
                               validator: (v) {
                                 final booked = double.tryParse(v!) ?? 0;
                                 final total = double.tryParse(_areaController.text) ?? 0;
-                                final factor = _areaUnit == AreaUnit.sqFt ? 1/9.0 : 1.0;
+                                final factor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
                                 if (booked > total * factor) return 'Exceeds total';
                                 return null;
                               },
@@ -814,19 +817,16 @@ class _BookingDialogState extends State<BookingDialog> {
                               final bookedArea = double.tryParse(_bookedAreaController.text) ?? 0;
                               final totalAmountValue = purchasePrice * (bookedArea / (_areaUnit == AreaUnit.sqFt ? 9.0 : 1.0));
 
-
-
-// सही तरीके से फील्ड्स अपडेट करें
                               localPlot.clientName = _clientController.text;
                               localPlot.fare = purchasePrice;
                               localPlot.totalAmount = totalAmountValue;
-                              localPlot.receivingAmount = double.tryParse(_receivingController.text) ?? 0; // paidAmount हटाया
+                              localPlot.receivingAmount = double.tryParse(_receivingController.text) ?? 0;
                               localPlot.bookedArea = bookedArea;
                               localPlot.area = '${_areaController.text} ${_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'}';
                               localPlot.areaUnit = _areaUnit;
                               localPlot.photoPath = _uploadedPhoto?.path;
                               localPlot.projectName = _projectController.text;
-                              localPlot.pendingAmount = totalAmountValue - localPlot.receivingAmount; // receivingAmount से
+                              localPlot.pendingAmount = totalAmountValue - localPlot.receivingAmount;
                               localPlot.paidThrough = _selectedPaidThrough;
                               localPlot.bookedByDealer = _bookedByController.text;
                               localPlot.customerPhone = _customerPhoneController.text;
@@ -835,7 +835,6 @@ class _BookingDialogState extends State<BookingDialog> {
                               localPlot.plotType = _plotTypeController.text;
                               localPlot.status = _status;
 
-// जरूरी: अपडेट के बाद recalculation
                               localPlot.updateCalculations(
                                 newFare: purchasePrice,
                                 newBookedArea: bookedArea,
@@ -846,7 +845,7 @@ class _BookingDialogState extends State<BookingDialog> {
                                 await _submitBookingAPI(localPlot);
                                 widget.onSave(localPlot);
                               } catch (e) {
-                                // Error already shown in API
+                                // Error already shown
                               }
                             }
                           },

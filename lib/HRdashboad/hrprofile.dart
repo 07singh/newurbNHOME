@@ -5,17 +5,17 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/Model/profile_model.dart';
 import '/service/profile_service.dart';
 
-class ProfileScreen extends StatefulWidget {
+class PScreen extends StatefulWidget {
   final String? phone;
   final String? position;
 
-  const ProfileScreen({super.key, this.phone, this.position});
+  const PScreen({super.key, this.phone, this.position});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<PScreen> createState() => _PScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _PScreenState extends State<PScreen> {
   final _storage = const FlutterSecureStorage();
   final _service = ProfileService();
   late Future<ProfileResponse> _futureProfile;
@@ -81,12 +81,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onRefresh: _refresh,
             child: ListView(
               children: [
-                // 🟡 Header Section
+                // Header Section – YELLOW TO BLUE
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.only(
                       top: 50, left: 16, right: 16, bottom: 30),
-                  color: const Color(0xFFFFD700),
+                  color: Colors.blue.shade700, // Changed from 0xFFFFD700
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -110,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                // 👤 Profile Image Section
+                // Profile Image Section
                 Transform.translate(
                   offset: const Offset(0, -40),
                   child: Column(
@@ -141,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 10),
 
-                // 📋 Profile Info Card
+                // Profile Info Card
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
@@ -169,7 +169,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'Status',
                           user.status == true ? 'Active' : 'Inactive',
                         ),
-
+                        _buildInfoRow('Staff Id', user.staffId?.toString()),
+                        _buildInfoRow('Create Date', user.createDate),
+                        _buildInfoRow('Joining Date', user.joiningDate),
+                        _buildInfoRow('Login Date', user.loginDate),
+                        _buildInfoRow('Login Out', user.loginOut),
                       ],
                     ),
                   ),
@@ -177,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 30),
 
-                // 🟨 Update Button
+                // Update Button – YELLOW TO BLUE
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: SizedBox(
@@ -185,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     height: 50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFD700),
+                        backgroundColor: Colors.blue.shade700, // Changed from 0xFFFFD700
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -194,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: const Text(
                         "Update",
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Colors.white, // Changed text to white for visibility
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),

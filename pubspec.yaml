@@ -28,7 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run flutter pub outdated.
 dependencies:
-  image_picker: ^1.0.7
+  image_picker: ^1.2.0
   intl: ^0.20.2
   flutter:
     sdk: flutter
@@ -40,6 +40,10 @@ dependencies:
   flutter_image_compress: ^2.1.0
   logger: ^2.0.2
   connectivity_plus: ^7.0.0
+  pdf: ^3.10.8
+  path_provider: ^2.1.1
+  open_file: ^3.3.2
+  share_plus: ^7.2.2
 
 
 
@@ -51,6 +55,8 @@ dependencies:
   google_fonts: ^6.3.2
   provider: ^6.1.5+1
   socket_io_client: ^2.0.3
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4

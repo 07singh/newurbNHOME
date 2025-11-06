@@ -1,10 +1,12 @@
+
+
 import 'package:flutter/material.dart';
 import '/plot_screen/hh.dart';
 import '/plot_screen/new_screen.dart';
 import'/asscoiate_plot_scren/book_plot.dart';
 
-class BookPlotScreenNoNav extends StatelessWidget {
-  const BookPlotScreenNoNav({Key? key}) : super(key: key);
+class NoNav extends StatelessWidget {
+  const NoNav({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

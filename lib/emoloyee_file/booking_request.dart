@@ -185,25 +185,28 @@ class _PendingRequestsScreenState extends State<PendingRequestsScreen> {
     if (_approvingIds.contains(plot.id)) return;
     _approvingIds.add(plot.id);
 
-    final paymentRatio = plot.totalAmount == 0 ? 0.0 : plot.paidAmount / plot.totalAmount;
-    final nextStatus = paymentRatio >= 0.5 ? "Sellout" : "Booked";
-    final targetTab = paymentRatio >= 0.5 ? BookingStatus.sellout : BookingStatus.booked;
-
-    // ✅ Only send minimal fields backend expects — not full plot.toJson()
-    final payload = {
-      "Plot_Number": plot.plotNumber,
-      "Project_Name": plot.projectName,
-      "Customer_Name": plot.customerName,
-      "Customer_Phn_Number": plot.customerPhone,
-      "Booked_ByDealer": plot.dealerName,
-      "Dealer_Phn_Number": plot.dealerPhone,
-      "Booking_Status": nextStatus.toLowerCase(),
-      "Status": true
-    };
-
     try {
-      debugPrint("Approving Plot ID: ${plot.id} → $nextStatus");
-      debugPrint("✅ Sending payload: $payload");
+      // Prepare payload exactly as backend expects
+      final payload = {
+        "Project_Name": plot.projectName,
+        "Plot_Number": plot.plotNumber,
+        "Customer_Name": plot.customerName,
+        "Customer_Phn_Number": plot.customerPhone,
+        "Booked_ByDealer": plot.dealerName,
+        "Dealer_Phn_Number": plot.dealerPhone,
+        "Booking_Area": plot.bookingArea,
+        "Total_Area": plot.totalArea,
+        "Total_Amount": plot.totalAmount,
+        "Receiving_Amount": plot.paidAmount,
+        "Pending_Amount": plot.pendingAmount,
+        "Paid_Through": plot.paidThrough,
+        "Screenshot": plot.screenshot,
+        "Plot_Type": plot.plotType,
+        "Bookingdate": DateTime.now().toString(),
+      };
+
+      debugPrint("Approving Plot ID: ${plot.id}");
+      debugPrint("Payload: $payload");
 
       final response = await http.post(
         Uri.parse(acceptUrl),
@@ -213,40 +216,23 @@ class _PendingRequestsScreenState extends State<PendingRequestsScreen> {
 
       debugPrint("Response: ${response.statusCode} | ${response.body}");
 
-      final resp = jsonDecode(response.body);
-      final msgText = resp["message"]?.toString().toLowerCase() ?? "";
+      if (response.statusCode == 200) {
+        final resp = jsonDecode(response.body);
+        final msg = resp["message"] ?? "Booking approved successfully";
 
-      final isSuccess = response.statusCode == 200 ||
-          msgText.contains("success") ||
-          msgText.contains("approved") ||
-          msgText.contains("sellout") ||
-          msgText.contains("booked");
-
-      if (isSuccess) {
-        String msg;
-        Color color;
-
-        if (nextStatus == "Sellout") {
-          msg = "🎉 Approved! This plot is now marked as SELLOUT (50%+ paid)";
-          color = Colors.green;
-        } else {
-          msg = "✅ Approved! This plot is now marked as BOOKED (<50% paid)";
-          color = Colors.blue;
-        }
-
-        _showSnackBar(msg, color);
+        _showSnackBar("✅ $msg", Colors.green);
 
         setState(() {
           plots.removeWhere((p) => p.id == plot.id);
         });
 
-        if (selectedStatus == targetTab) {
-          await Future.delayed(const Duration(milliseconds: 300));
-          await _fetchPlots();
-        }
+        // Refresh the list after a short delay
+        await Future.delayed(const Duration(milliseconds: 300));
+        await _fetchPlots();
       } else {
-        final msg = resp["message"] ?? resp["error"] ?? "Failed";
-        _showSnackBar("❌ Approve failed: $msg", Colors.red);
+        final resp = jsonDecode(response.body);
+        final msg = resp["message"] ?? resp["error"] ?? "Approve failed";
+        _showSnackBar("❌ $msg", Colors.red);
       }
     } catch (e) {
       debugPrint("Exception: $e");

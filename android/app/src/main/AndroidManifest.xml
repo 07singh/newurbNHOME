@@ -3,6 +3,15 @@
     <!-- Permission -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- 📍 Location Permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Optional: background location if needed -->
+    <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> -->
+
+    <!-- 📸 Camera Permission -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+
     <application
         android:label="NewUrbanHome"
         android:icon="@mipmap/ic_launcher">

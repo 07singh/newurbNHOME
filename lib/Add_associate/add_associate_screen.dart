@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
 import '/plot_screen/book_plot.dart';
 import '/DirectLogin/DirectLoginPage.dart';
 import '/emoloyee_file/profile_screen.dart';
-import '/DirectLogin/client_visit.dart'; // <-- your ClientVisitScreen path
-import'/Add_associate/add_associate_screen.dart';
+import '/DirectLogin/client_visit.dart';
+import '/Add_associate/add_associate_screen.dart';
 
 class AppConstants {
   static const String apiUrl = "https://realapp.cheenu.in/api/associate/add";
@@ -30,7 +29,8 @@ class AppConstants {
     "Password": "Password",
   };
   static const Map<String, String> fileLabels = {
-    "AadharFrontPic": "Upload Aadhar Front",
+    "ProfilePic": "Upload Profile Picture",
+    "AadharFrontPic": "Upload Aadhaar Front",
     "AadhaarBackPic": "Upload Aadhaar Back",
     "PanPic": "Upload PAN Card",
   };
@@ -47,7 +47,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _sameAsCurrent = false;
-  int _currentIndex = 0; // Bottom Navigation selected index
+  int _currentIndex = 0;
 
   final Map<String, TextEditingController> _controllers = {
     for (var key in AppConstants.fieldLabels.keys) key: TextEditingController(),
@@ -79,10 +79,13 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
     _focusNodes.values.forEach((f) => f.dispose());
     super.dispose();
   }
-
   Future<void> _pickImage(String key) async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.image);
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
       if (result == null || result.files.single.path == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("No file selected")),
@@ -90,38 +93,58 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         return;
       }
 
-      final file = File(result.files.single.path!);
-      if (await file.length() > AppConstants.maxFileSizeBytes) {
+      final filePath = result.files.single.path!;
+      final file = File(filePath);
+
+      // Check file size
+      final fileSize = await file.length();
+      if (fileSize > AppConstants.maxFileSizeBytes) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("File size exceeds 5MB limit")),
+          const SnackBar(content: Text("⚠️ File size exceeds 5MB limit")),
         );
         return;
       }
 
-      final compressed = await FlutterImageCompress.compressWithFile(
-        file.path,
-        quality: 70,
-        minWidth: 800,
-        minHeight: 600,
+      // Compress image
+      final targetPath =
+          "${file.parent.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg";
+      final compressedXFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: 60,
       );
 
-      if (compressed == null) throw Exception("Image compression failed");
+      if (compressedXFile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Failed to compress image")),
+        );
+        return;
+      }
 
-      final base64String = base64Encode(compressed);
+      // ✅ Convert XFile → File
+      final compressedFile = File(compressedXFile.path);
+
+      // Convert to Base64
+      final bytes = await compressedFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      // Update UI
       setState(() {
-        _files[key] = file;
-        _base64[key] = base64String;
+        _files[key] = compressedFile;
+        _base64[key] = base64Image;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("${AppConstants.fileLabels[key]} uploaded")),
+        SnackBar(content: Text("${AppConstants.fileLabels[key]} uploaded ✅")),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error picking file: $e")),
+        SnackBar(content: Text("⚠️ Error picking file: $e")),
       );
     }
   }
+
+
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
@@ -143,20 +166,36 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final body = jsonEncode({
-        for (var key in AppConstants.fieldLabels.keys)
-          key: _controllers[key]!.text.trim(),
+      final now = DateTime.now();
+
+      final Map<String, dynamic> bodyMap = {
+        "FullName": _controllers["FullName"]!.text.trim(),
+        "Phone": _controllers["Phone"]!.text.trim(),
+        "Email": _controllers["Email"]!.text.trim(),
+        "CurrentAddress": _controllers["CurrentAddress"]!.text.trim(),
+        "PermanentAddress": _controllers["PermanentAddress"]!.text.trim(),
+        "State": _controllers["State"]!.text.trim(),
+        "City": _controllers["City"]!.text.trim(),
+        "Pincode": _controllers["Pincode"]!.text.trim(),
+        "AadhaarNo": _controllers["AadhaarNo"]!.text.trim(),
+        "PanNo": _controllers["PanNo"]!.text.trim(),
         "AadharFrontPic": _base64["AadharFrontPic"],
         "AadhaarBackPic": _base64["AadhaarBackPic"],
         "PanPic": _base64["PanPic"],
+        "Password": _controllers["Password"]!.text.trim(),
+        "Profile_Pic": _base64["ProfilePic"], // ✅ matches backend key
         "Status": true,
-        "CreateDate": DateTime.now().toIso8601String(),
-      });
+        "AssociateId": "AS${DateTime.now().millisecondsSinceEpoch % 100000}", // simple random ID
+        "CreateDate": now.toIso8601String(),
+        "JoiningDate": now.toIso8601String(),
+        "LoginDate": now.toIso8601String(),
+        "LogoutDate": null
+      };
 
       final response = await http.post(
         Uri.parse(AppConstants.apiUrl),
         headers: {"Content-Type": "application/json"},
-        body: body,
+        body: jsonEncode(bodyMap),
       );
 
       setState(() => _isLoading = false);
@@ -172,6 +211,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       _showDialog("⚠️ Error", "Something went wrong: $e");
     }
   }
+
 
   void _showDialog(String title, String message) {
     showDialog(
@@ -224,6 +264,8 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
                 autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   children: [
+                    const SizedBox(height: 10),
+                    _profilePicField(),
                     const SizedBox(height: 20),
                     ..._inputFields(),
                     const SizedBox(height: 20),
@@ -246,6 +288,28 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _profilePicField() {
+    final file = _files["ProfilePic"];
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _pickImage("ProfilePic"),
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: file != null ? FileImage(file) : null,
+            child: file == null
+                ? const Icon(Icons.camera_alt, size: 40, color: Colors.black54)
+                : null,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text("Upload Profile Picture",
+            style: TextStyle(fontWeight: FontWeight.w500)),
+      ],
     );
   }
 
@@ -331,7 +395,8 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
           hintText: hint,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        validator: (v) => v == null || v.isEmpty ? "Please enter ${AppConstants.fieldLabels[key]}" : null,
+        validator: (v) =>
+        v == null || v.isEmpty ? "Please enter ${AppConstants.fieldLabels[key]}" : null,
       ),
     );
   }

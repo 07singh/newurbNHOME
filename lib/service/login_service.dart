@@ -1,50 +1,31 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '/Model/login_model.dart';
+import '../Model/login_model.dart';
 
 class LoginService {
-  // Login user with mobile, password, and position (TL/Sales)
+  final String baseUrl = "https://realapp.cheenu.in";
+
   Future<LoginApi?> loginUser(String mobile, String password, String position) async {
-    if (mobile.isEmpty || password.isEmpty || position.isEmpty) {
-      print("⚠️ Mobile, password, or position is empty");
-      return null;
-    }
-
-    // ✅ Build GET URL with query parameters
-    final Uri url = Uri.parse(
-      "https://realapp.cheenu.in/Api/Login?mobile=$mobile&password=$password&position=$position",
-    );
-
     try {
-      print("🔹 Sending login request to: $url");
+      final url =
+          "$baseUrl/api/staff/login?mobile=$mobile&password=$password&position=$position";
 
-      // ✅ Simple GET request, no headers
-      final response = await http.get(url);
-
-      print("🔹 Response status: ${response.statusCode}");
-      print("🔹 Response body: ${response.body}");
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-
-        if (jsonData.isNotEmpty) {
-          final loginData = LoginApi.fromJson(jsonData);
-          return loginData;
-        } else {
-          print("⚠️ Empty response body");
-          return null;
-        }
-      } else if (response.statusCode == 401) {
-        print("❌ Unauthorized: Invalid credentials or access denied");
-      } else if (response.statusCode == 404) {
-        print("❌ Not found: Check API URL");
+        final data = json.decode(response.body);
+        return LoginApi.fromJson(data);
       } else {
-        print("❌ Server error: ${response.statusCode}");
+        return LoginApi(
+          statuscode: "Error",
+          message: "Server returned ${response.statusCode}",
+        );
       }
     } catch (e) {
-      print("🔥 Exception in loginUser: $e");
+      return LoginApi(
+        statuscode: "Error",
+        message: "Something went wrong: $e",
+      );
     }
-
-    return null;
   }
 }

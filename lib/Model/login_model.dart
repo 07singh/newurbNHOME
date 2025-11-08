@@ -1,33 +1,32 @@
 class LoginApi {
-  int? id;
-  String? name;
-  String? mobile;
-  String? password;
-  String? message;
-  String? statuscode;
-  String? position; // ✅ Add this
+  final int? id;
+  final String? name;
+  final String? mobile;
+  final String? position;
+  final String? profilePic;
+  final String statuscode;
+  final String message;
 
-  LoginApi({this.id, this.name, this.mobile, this.password, this.message, this.statuscode, this.position});
+  LoginApi({
+    this.id,
+    this.name,
+    this.mobile,
+    this.position,
+    this.profilePic,
+    required this.statuscode,
+    required this.message,
+  });
 
   factory LoginApi.fromJson(Map<String, dynamic> json) {
+    final staff = json['staff'];
     return LoginApi(
-      id: json['id'],
-      name: json['name'],
-      mobile: json['mobile'],
-      password: json['password'],
-      message: json['Message'],       // match backend
-      statuscode: json['StatusCode'], // match backend
-      position: json['position'],     // map position
+      id: staff != null ? staff['Id'] : null,
+      name: staff != null ? staff['Fullname'] : null,
+      mobile: staff != null ? staff['mobile'] : null,
+      position: staff != null ? staff['Position'] : null,
+      profilePic: staff != null ? staff['profilepic'] : null,
+      statuscode: json['status'] ?? '',
+      message: json['message'] ?? '',
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'mobile': mobile,
-    'password': password,
-    'message': message,
-    'statuscode': statuscode,
-    'position': position,
-  };
 }

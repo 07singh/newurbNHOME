@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:provider/provider.dart'; // ✅ Provider import
+import 'package:provider/provider.dart';
 import '/service/login_service.dart';
 import '/Model/login_model.dart';
 import '/DirectLogin/DirectLoginPage.dart';
-import '/provider/user_provider.dart'; // ✅ UserProvider import
+import '/provider/user_provider.dart';
 
 class SignInPaged extends StatefulWidget {
   const SignInPaged({super.key});
@@ -27,46 +27,66 @@ class _SignInPagedState extends State<SignInPaged> {
 
     setState(() => _isLoading = true);
 
-    String phone = phoneController.text.trim();
-    String password = passwordController.text.trim();
+    try {
+      final phone = phoneController.text.trim();
+      final password = passwordController.text.trim();
 
-    // Login API Call
-    LoginApi? loginData = await loginService.loginUser(phone, password, "Director");
+      // Call the login API
+      final LoginApi? loginData =
+      await loginService.loginUser(phone, password, "Director");
 
-    setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
 
-    if (loginData != null && loginData.statuscode == "Success") {
-      // Only Director can login
-      if (loginData.position == 'Director') {
-        // Store user details in secure storage
-        await storage.write(key: 'user_id', value: (loginData.id ?? '').toString());
-        await storage.write(key: 'user_name', value: loginData.name ?? '');
-        await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
-        await storage.write(key: 'user_role', value: loginData.position ?? '');
+      if (loginData != null && loginData.statuscode.toLowerCase() == "success") {
+        if ((loginData.position ?? '').toLowerCase() == 'director') {
+          // Save in secure storage
+          await storage.write(key: 'user_id', value: loginData.id.toString());
+          await storage.write(key: 'user_name', value: loginData.name ?? '');
+          await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
+          await storage.write(key: 'user_role', value: loginData.position ?? '');
+          await storage.write(key: 'profile_pic', value: loginData.profilePic ?? '');
 
-        // ✅ Store user info in Provider
-        Provider.of<UserProvider>(context, listen: false)
-            .setUser(loginData.name ?? 'Unknown', loginData.position ?? 'Director');
+          // Save in Provider
+          Provider.of<UserProvider>(context, listen: false)
+              .setUser(loginData.name ?? 'Unknown', loginData.position ?? 'Director');
 
-        // Navigate to DirectloginPage with user details
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DirectloginPage(
-              userName: loginData.name ?? 'Unknown User',
-              userRole: loginData.position ?? 'Director',
-              profileImageUrl: null, // Pass profile image if available in loginData
+          // Navigate to DirectLoginPage
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DirectloginPage(
+                userName: loginData.name ?? 'Unknown User',
+                userRole: loginData.position ?? 'Director',
+                profileImageUrl: (loginData.profilePic != null &&
+                    loginData.profilePic!.isNotEmpty)
+                    ? "https://realapp.cheenu.in/Images/${loginData.profilePic}"
+                    : null,
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Access Denied: Only Director can login here'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access Denied: Only Director can login here')),
+          SnackBar(
+            content: Text(loginData?.message ?? "Login Failed"),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
-    } else {
+    } catch (e) {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loginData?.message ?? "Login Failed")),
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }

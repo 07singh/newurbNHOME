@@ -1,62 +1,80 @@
+class StaffProfileResponse {
+  final String message;
+  final String status;
+  final Staff? staff;
 
-class ProfileResponse {
-  final List<ProfileData> data1;
-  final String? message;
+  StaffProfileResponse({
+    required this.message,
+    required this.status,
+    required this.staff,
+  });
 
-  ProfileResponse({required this.data1, this.message});
-
-  factory ProfileResponse.fromJson(Map<String, dynamic> json) {
-    final data = (json['data1'] as List<dynamic>?)
-        ?.map((e) => ProfileData.fromJson(e as Map<String, dynamic>))
-        .toList() ??
-        <ProfileData>[];
-    return ProfileResponse(data1: data, message: json['message'] as String?);
+  factory StaffProfileResponse.fromJson(Map<String, dynamic> json) {
+    return StaffProfileResponse(
+      message: json['message'] ?? '',
+      status: json['status'] ?? '',
+      staff: json['staff'] != null ? Staff.fromJson(json['staff']) : null,
+    );
   }
 }
 
-class ProfileData {
-  final int? id;
-  final String? fullname;
-  final String? phone;
-  final String? email;
-  final String? position;
-  final String? password;
-  final bool? status;
-  final dynamic staffId;
-  final String? createDate;
-  final String? joiningDate;
+class Staff {
+  final int id;
+  final String fullName;
+  final String phone;
+  final String email;
+  final String position;
+  final String staffId;
+  final String password;
+  final bool status;
+  final String createDate;
   final String? loginDate;
-  final String? loginOut;
+  final String? logoutDate;
+  final String joiningDate;
+  final String? profilePicUrl;
 
-  ProfileData({
-    this.id,
-    this.fullname,
-    this.phone,
-    this.email,
-    this.position,
-    this.password,
-    this.status,
-    this.staffId,
-    this.createDate,
-    this.joiningDate,
+  Staff({
+    required this.id,
+    required this.fullName,
+    required this.phone,
+    required this.email,
+    required this.position,
+    required this.staffId,
+    required this.password,
+    required this.status,
+    required this.createDate,
     this.loginDate,
-    this.loginOut,
+    this.logoutDate,
+    required this.joiningDate,
+    this.profilePicUrl,
   });
 
-  factory ProfileData.fromJson(Map<String, dynamic> json) {
-    return ProfileData(
-      id: json['Id'] is int ? json['Id'] as int : int.tryParse('${json['Id']}'),
-      fullname: json['Fullname'] as String?,
-      phone: json['Phone'] as String?,
-      email: json['Email'] as String?,
-      position: json['Position'] as String?,
-      password: json['Password'] as String?,
-      status: json['Status'] is bool ? json['Status'] as bool : (json['Status'] == 1),
-      staffId: json['Staff_Id'],
-      createDate: json['CreateDate']?.toString(),
-      joiningDate: json['JoiningDate']?.toString(),
-      loginDate: json['LoginDate']?.toString(),
-      loginOut: json['LoginOut']?.toString(),
+  factory Staff.fromJson(Map<String, dynamic> json) {
+    return Staff(
+      id: json['Id'] ?? 0,
+      fullName: json['Fullname'] ?? '',
+      phone: json['Phone'] ?? '',
+      email: json['Email'] ?? '',
+      position: json['Position'] ?? '',
+      staffId: json['Staff_Id'] ?? '',
+      password: json['Password'] ?? '',
+      status: json['Status'] ?? false,
+      createDate: json['CreateDate'] ?? '',
+      loginDate: json['LoginDate'],
+      logoutDate: json['LogoutDate'],
+      joiningDate: json['JoiningDate'] ?? '',
+      profilePicUrl: json['profilePicUrl'],
     );
+  }
+
+  /// Returns full image URL with domain if available
+  String get fullProfilePicUrl {
+    if (profilePicUrl == null || profilePicUrl!.isEmpty) {
+      return "https://realapp.cheenu.in/Uploads/default.png";
+    }
+    if (profilePicUrl!.startsWith("http")) {
+      return profilePicUrl!;
+    }
+    return "https://realapp.cheenu.in${profilePicUrl!}";
   }
 }

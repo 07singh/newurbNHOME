@@ -8,6 +8,8 @@ import 'week_flowup_page.dart';
 import 'total_flowup_page.dart';
 import 'add_header_page.dart';
 import '/sign_page.dart';
+import'/DirectLogin/add_visitor_screen.dart';
+import'/DirectLogin/add_visitor_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userName;
@@ -302,20 +304,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 12),
                   _buildFlowUpButton(
                     context,
-                    "Staff Add",
+                    "Add Visitor list",
                     Icons.list_alt_rounded,
                     Colors.green,
                     LinearGradient(colors: [Colors.green, Colors.lightGreen]),
-                    TotalFlowupPage(),
+                    VisitorListScreen(),
                   ),
                   const SizedBox(width: 12),
                   _buildFlowUpButton(
                     context,
-                    "Add Header",
+                    "Add Visitor",
                     Icons.add_box_rounded,
                     Colors.orange,
                     LinearGradient(colors: [Colors.orange, Colors.deepOrange]),
-                    AddHeaderPage(),
+                    AddVisitorScreen(),
                   ),
                 ],
               ),

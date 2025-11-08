@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
+/// Updated CommissionListScreen – now receives the associate's phone number
 class CommissionListScreen extends StatelessWidget {
-  const CommissionListScreen({super.key});
+  /// The associate's phone number (passed from the dashboard)
+  final String phone;
 
-  // Dummy data for now
+  const CommissionListScreen({
+    super.key,
+    required this.phone,
+  });
+
+  // Dummy data for now – you can replace this with a network call using `phone`
   final List<Map<String, dynamic>> commissions = const [
     {
       "clientName": "Rohit Sharma",
@@ -30,6 +37,9 @@ class CommissionListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // You can use `phone` here later, e.g.:
+    // FutureBuilder<List<...>>(future: fetchCommissions(phone), ...)
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -58,8 +68,11 @@ class CommissionListScreen extends StatelessWidget {
                   _buildRow("Client Name", item["clientName"]),
                   _buildRow("Project Name", item["projectName"]),
                   _buildRow("Commission Amount", "₹ ${item["commissionAmount"]}"),
-                  _buildRow("Status", item["status"],
-                      valueColor: item["status"] == "Paid" ? Colors.green : Colors.red),
+                  _buildRow(
+                    "Status",
+                    item["status"],
+                    valueColor: item["status"] == "Paid" ? Colors.green : Colors.red,
+                  ),
                   _buildRow("Date", item["date"]),
                 ],
               ),
@@ -76,8 +89,10 @@ class CommissionListScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black54)),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
+          ),
           Text(
             value,
             style: TextStyle(

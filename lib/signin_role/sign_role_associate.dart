@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../Model/associate_model.dart';
-import '../service/associate_service.dart';
+import '/service/associatee_login_new_service.dart';
+import '/Model/associatate_new_login_model.dart';
 import '../Association_page.dart'; // Dashboard page
 
 class AssociateLoginScreen extends StatefulWidget {
@@ -16,56 +15,59 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  final AssociateService service = AssociateService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
+  final AssociateLoginService service = AssociateLoginService();
   bool isLoading = false;
 
   void login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
-    AssociateLogin? response = await service.login(
-      phoneController.text.trim(),
-      passwordController.text.trim(),
-    );
-
-    setState(() {
-      isLoading = false;
-    });
-
-    if (response != null && response.statusCode == "Success") {
-      // Save user details in secure storage
-      await _storage.write(key: 'phone', value: phoneController.text.trim());
-      // TODO: Replace 'user_name' and 'user_role' with actual fields from AssociateLogin
-      // Example: If AssociateLogin has 'fullName' and 'role' fields, use:
-      // await _storage.write(key: 'user_name', value: response.fullName ?? '');
-      // await _storage.write(key: 'user_role', value: response.role ?? '');
-      await _storage.write(key: 'user_name', value: phoneController.text.trim()); // Fallback to phone
-      await _storage.write(key: 'user_role', value: 'Associate'); // Default role
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message ?? "Login Successful")),
+    try {
+      final response = await service.login(
+        phone: phoneController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      // Pass user details to AssociateDashboardPage
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AssociateDashboardPage(
-            userName: phoneController.text.trim(), // Fallback to phone
-            userRole: 'Associate', // Default role
-            profileImageUrl: null, // Replace with response.profileImageUrl if available
-            phone: phoneController.text.trim(),
+      setState(() => isLoading = false);
+
+      if (response.isSuccess) {
+        // ✅ Login successful
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: Colors.green,
           ),
-        ),
-      );
-    } else {
+        );
+
+        // Navigate to Associate Dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AssociateDashboardPage(
+              userName: "Associate",
+              userRole: "Associate",
+              phone: "",
+              profileImageUrl: null,
+            ),
+          ),
+        );
+      } else {
+        // ❌ Login failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response?.message ?? "Login Failed")),
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -162,9 +164,7 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
                           backgroundColor: Colors.blueAccent,
                         ),
                         child: isLoading
-                            ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
+                            ? const CircularProgressIndicator(color: Colors.white)
                             : const Text(
                           "Login",
                           style: TextStyle(fontSize: 18, color: Colors.white),

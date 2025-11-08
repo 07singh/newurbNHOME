@@ -25,42 +25,63 @@ class _SignInPagehState extends State<SignInPageh> {
 
     setState(() => _isLoading = true);
 
-    String phone = phoneController.text.trim();
-    String password = passwordController.text.trim();
+    try {
+      String phone = phoneController.text.trim();
+      String password = passwordController.text.trim();
 
-    // API Call for HR login
-    LoginApi? loginData = await loginService.loginUser(phone, password, "HR");
+      // Call the login API
+      LoginApi? loginData = await loginService.loginUser(phone, password, "HR");
 
-    setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
 
-    if (loginData != null && loginData.statuscode == "Success") {
-      // Only HR can login
-      if (loginData.position == 'HR') {
-        // Store user details in secure storage
-        await storage.write(key: 'user_id', value: (loginData.id ?? '').toString());
-        await storage.write(key: 'user_name', value: loginData.name ?? '');
-        await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
-        await storage.write(key: 'user_role', value: loginData.position ?? '');
+      if (loginData != null && loginData.statuscode.toLowerCase() == "success") {
+        // Only HR can login
+        if ((loginData.position ?? '').toLowerCase() == 'hr') {
+          // Store user details securely
+          await storage.write(key: 'user_id', value: loginData.id.toString());
+          await storage.write(key: 'user_name', value: loginData.name ?? '');
+          await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
+          await storage.write(key: 'user_role', value: loginData.position ?? '');
+          await storage.write(key: 'profile_pic', value: loginData.profilePic ?? '');
 
-        // Navigate to HRDashboardPage with user details
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HRDashboardPage(
-              userName: loginData.name ?? 'Unknown User',
-              userRole: loginData.position ?? 'HR',
-              profileImageUrl: null, // Add profile image URL if available in loginData
+          // Navigate to HR Dashboard
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HRDashboardPage(
+                userName: loginData.name ?? 'Unknown',
+                userRole: loginData.position ?? 'HR',
+                profileImageUrl: (loginData.profilePic != null && loginData.profilePic!.isNotEmpty)
+                    ? "https://realapp.cheenu.in/Images/${loginData.profilePic}"
+                    : null,
+              ),
             ),
+          );
+        } else {
+          // Access denied for non-HR
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Access Denied: Only HR can login here'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } else {
+        // Login failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loginData?.message ?? 'Login Failed'),
+            backgroundColor: Colors.redAccent,
           ),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access Denied: Only HR can login here')),
-        );
       }
-    } else {
+    } catch (e) {
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loginData?.message ?? "Login Failed")),
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -154,7 +175,10 @@ class _SignInPagehState extends State<SignInPageh> {
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text("Login", style: TextStyle(fontSize: 18, color: Colors.white)),
+                            : const Text(
+                          "Login",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                       ),
                     ),
                   ],

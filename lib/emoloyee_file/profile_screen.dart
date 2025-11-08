@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/Model/profile_model.dart';
 import '/service/profile_service.dart';
@@ -17,9 +15,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _storage = const FlutterSecureStorage();
-  final _service = ProfileService();
-  late Future<ProfileResponse> _futureProfile;
-  File? _imageFile;
+  final StaffProfileService _service = StaffProfileService();
+  late Future<StaffProfileResponse> _futureProfile;
 
   @override
   void initState() {
@@ -27,39 +24,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _futureProfile = _loadProfile();
   }
 
-  Future<ProfileResponse> _loadProfile() async {
+  Future<StaffProfileResponse> _loadProfile() async {
     final phone = widget.phone ?? await _storage.read(key: 'user_mobile') ?? '';
-    final position =
-        widget.position ?? await _storage.read(key: 'user_role') ?? 'Director';
+    final position = widget.position ?? await _storage.read(key: 'user_role') ?? '';
 
-    if (phone.isEmpty) {
-      throw Exception('Phone number not available');
-    }
-
+    if (phone.isEmpty) throw Exception('Phone number not available');
     return _service.fetchProfile(phone: phone, position: position);
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _futureProfile = _loadProfile();
-    });
-  }
-
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedImage = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedImage != null) {
-      setState(() {
-        _imageFile = File(pickedImage.path);
-      });
-    }
+    setState(() => _futureProfile = _loadProfile());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: FutureBuilder<ProfileResponse>(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text("Profile"),
+        backgroundColor: Colors.blue.shade700,
+        elevation: 0,
+      ),
+      body: FutureBuilder<StaffProfileResponse>(
         future: _futureProfile,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -67,142 +53,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            );
           }
 
-          final profileResponse = snapshot.data!;
-          if (profileResponse.data1.isEmpty) {
-            return const Center(child: Text('No profile found'));
+          final staff = snapshot.data?.staff;
+          if (staff == null) {
+            return const Center(child: Text('No profile data found'));
           }
-
-          final user = profileResponse.data1.first;
 
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               children: [
-                // 🟡 Header Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(
-                      top: 50, left: 16, right: 16, bottom: 30),
-                  color: const Color(0xFFFFD700),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back,
-                              color: Colors.white, size: 24),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                      const Text(
-                        "Profile",
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                // 🔹 Profile Picture (API Image)
+                Center(
+                  child: CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Colors.white,
+                    backgroundImage: NetworkImage(staff.fullProfilePicUrl),
+                    onBackgroundImageError: (_, __) {},
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 🔹 Name & Position
+                Center(
+                  child: Text(
+                    staff.fullName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Center(
+                  child: Text(
+                    staff.position,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.grey[600]),
                   ),
                 ),
 
-                // 👤 Profile Image Section
-                Transform.translate(
-                  offset: const Offset(0, -40),
+                const SizedBox(height: 25),
+
+                // 🔹 Profile Info Card
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        backgroundImage: _imageFile != null
-                            ? FileImage(_imageFile!)
-                            : const AssetImage('assets/download (1).jpeg')
-                        as ImageProvider,
-                      ),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: _pickImage,
-                        child: const Text(
-                          "Change Picture",
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
+                      _buildInfoRow('Full Name', staff.fullName),
+                      _divider(),
+                      _buildInfoRow('Phone', staff.phone),
+                      _divider(),
+                      _buildInfoRow('Email', staff.email),
+                      _divider(),
+                      _buildInfoRow('Position', staff.position),
+                      _divider(),
+                      _buildInfoRow('Status', staff.status ? 'Active' : 'Inactive'),
+                      _divider(),
+                      _buildInfoRow('Staff ID', staff.staffId),
+                      _divider(),
+                      _buildInfoRow('Joining Date', staff.joiningDate),
+                      _divider(),
+                      _buildInfoRow('Login Date', staff.loginDate ?? '-'),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                // 📋 Profile Info Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInfoRow('ID', user.id?.toString()),
-                        _buildInfoRow('Full Name', user.fullname),
-                        _buildInfoRow('Phone', user.phone),
-                        _buildInfoRow('Email', user.email),
-                        _buildInfoRow('Position', user.position),
-                        _buildInfoRow(
-                          'Status',
-                          user.status == true ? 'Active' : 'Inactive',
-                        ),
-
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // 🟨 Update Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFD700),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        "Update",
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 30),
               ],
             ),
@@ -212,9 +147,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _divider() =>
+      const Divider(height: 18, color: Colors.grey, thickness: 0.3);
+
   Widget _buildInfoRow(String label, String? value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -230,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Expanded(
             child: Text(
-              value ?? '-',
+              (value != null && value.isNotEmpty) ? value : '-',
               style: const TextStyle(color: Colors.black54),
             ),
           ),

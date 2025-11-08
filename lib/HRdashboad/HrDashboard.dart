@@ -8,7 +8,8 @@ import '/HRdashboad/levee_request_screen.dart';
 import '/HRdashboad/report_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/plot_screen/hrplot.dart';
-import'/HRdashboad/hrprofile.dart';
+
+
 
 class HRDashboardPage extends StatefulWidget {
   final String userName;
@@ -46,7 +47,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   Future<void> _navigateToProfile() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => PScreen()),
+      MaterialPageRoute(builder: (context) =>   ProfileScreen()),
     );
     if (result != null && result is Map<String, String>) {
       setState(() {});

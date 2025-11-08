@@ -1,123 +1,64 @@
-class ProfileAssociate {
-  List<AssociateData>? data1;
-  String? message;
+class AssociateProfile {
+  final int id;
+  final String fullName;
+  final String phone;
+  final String email;
+  final String currentAddress;
+  final String city;
+  final String state;
+  final String pincode;
+  final String aadhaarNo;
+  final String panNo;
+  final bool status;
+  final String associateId;
+  final String? loginDate;
+  final String? logoutDate;
+  final String? profileImageUrl;
+  final String? aadharFrontPic;
+  final String? aadharBackPic;
+  final String? panPic;
 
-  ProfileAssociate({this.data1, this.message});
-
-  ProfileAssociate.fromJson(Map<String, dynamic> json) {
-    if (json['data1'] != null) {
-      data1 = <AssociateData>[];
-      json['data1'].forEach((v) {
-        data1!.add(AssociateData.fromJson(v));
-      });
-    }
-    message = json['message'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    if (data1 != null) {
-      data['data1'] = data1!.map((v) => v.toJson()).toList();
-    }
-    data['message'] = message;
-    return data;
-  }
-}
-
-class AssociateData {
-  int? id;
-  String? fullName;
-  String? phone;
-  String? email;
-  String? currentAddress;
-  dynamic permanentAddress;
-  String? state;
-  String? city;
-  String? pincode;
-  String? aadhaarNo;
-  String? panNo;
-  dynamic aadharFrontPic;
-  dynamic aadhaarBackPic;
-  dynamic panPic;
-  dynamic password;
-  bool? status;
-  String? associateId;
-  dynamic createDate;
-  dynamic joiningDate;
-  dynamic loginDate;
-  dynamic logoutDate;
-
-  AssociateData({
-    this.id,
-    this.fullName,
-    this.phone,
-    this.email,
-    this.currentAddress,
-    this.permanentAddress,
-    this.state,
-    this.city,
-    this.pincode,
-    this.aadhaarNo,
-    this.panNo,
-    this.aadharFrontPic,
-    this.aadhaarBackPic,
-    this.panPic,
-    this.password,
-    this.status,
-    this.associateId,
-    this.createDate,
-    this.joiningDate,
+  AssociateProfile({
+    required this.id,
+    required this.fullName,
+    required this.phone,
+    required this.email,
+    required this.currentAddress,
+    required this.city,
+    required this.state,
+    required this.pincode,
+    required this.aadhaarNo,
+    required this.panNo,
+    required this.status,
+    required this.associateId,
     this.loginDate,
     this.logoutDate,
+    this.profileImageUrl,
+    this.aadharFrontPic,
+    this.aadharBackPic,
+    this.panPic,
   });
 
-  AssociateData.fromJson(Map<String, dynamic> json) {
-    id = json['Id'];
-    fullName = json['FullName'];
-    phone = json['Phone'];
-    email = json['Email'];
-    currentAddress = json['CurrentAddress'];
-    permanentAddress = json['PermanentAddress'];
-    state = json['State'];
-    city = json['City'];
-    pincode = json['Pincode'];
-    aadhaarNo = json['AadhaarNo'];
-    panNo = json['PanNo'];
-    aadharFrontPic = json['AadharFrontPic'];
-    aadhaarBackPic = json['AadhaarBackPic'];
-    panPic = json['PanPic'];
-    password = json['Password'];
-    status = json['Status'];
-    associateId = json['AssociateId'];
-    createDate = json['CreateDate'];
-    joiningDate = json['JoiningDate'];
-    loginDate = json['LoginDate'];
-    logoutDate = json['LogoutDate'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['Id'] = id;
-    data['FullName'] = fullName;
-    data['Phone'] = phone;
-    data['Email'] = email;
-    data['CurrentAddress'] = currentAddress;
-    data['PermanentAddress'] = permanentAddress;
-    data['State'] = state;
-    data['City'] = city;
-    data['Pincode'] = pincode;
-    data['AadhaarNo'] = aadhaarNo;
-    data['PanNo'] = panNo;
-    data['AadharFrontPic'] = aadharFrontPic;
-    data['AadhaarBackPic'] = aadhaarBackPic;
-    data['PanPic'] = panPic;
-    data['Password'] = password;
-    data['Status'] = status;
-    data['AssociateId'] = associateId;
-    data['CreateDate'] = createDate;
-    data['JoiningDate'] = joiningDate;
-    data['LoginDate'] = loginDate;
-    data['LogoutDate'] = logoutDate;
-    return data;
+  factory AssociateProfile.fromJson(Map<String, dynamic> json) {
+    return AssociateProfile(
+      id: json['Id'] ?? 0,
+      fullName: json['FullName'] ?? '',
+      phone: json['Phone'] ?? '',
+      email: json['Email'] ?? '',
+      currentAddress: json['CurrentAddress'] ?? '',
+      city: json['City'] ?? '',
+      state: json['State'] ?? '',
+      pincode: json['Pincode'] ?? '',
+      aadhaarNo: json['AadhaarNo'] ?? '',
+      panNo: json['PanNo'] ?? '',
+      status: json['Status'] ?? false,
+      associateId: json['AssociateId'] ?? '',
+      loginDate: json['LoginDate'],
+      logoutDate: json['LogoutDate'],
+      profileImageUrl: json['profileImageUrl'],
+      aadharFrontPic: json['Aadharfrontpic'],
+      aadharBackPic: json['Aadharbackpic'],
+      panPic: json['Panpic'],
+    );
   }
 }

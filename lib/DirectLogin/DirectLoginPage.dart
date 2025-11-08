@@ -13,6 +13,7 @@ import '/emoloyee_file/booking_request.dart';
 import '/Employ.dart';
 import '/provider/user_provider.dart';
 import'/DirectLogin/add_staff.dart';
+import'/DirectLogin/add_staff_screen.dart';
 
 class DirectloginPage extends StatefulWidget {
   final String? userName; // ✅ Added
@@ -151,7 +152,7 @@ class _DirectloginPageState extends State<DirectloginPage>
               _buildDrawerItem(
                 icon: Icons.list_alt_rounded,
                 title: "Associate List",
-                onTap: () => _navigateTo(const AssociateCardScreen()),
+                onTap: () => _navigateTo(const AssociateListScreen()),
               ),
             ],
             if (userRole == "Director") ...[
@@ -610,7 +611,7 @@ class _DirectloginPageState extends State<DirectloginPage>
                   "Associate List",
                   Icons.list_alt_rounded,
                   Colors.purple,
-                  onTap: () => _navigateTo(const AssociateCardScreen()),
+                  onTap: () => _navigateTo(const AssociateListScreen()),
                 ),
                 const SizedBox(width: 12),
               ],
@@ -622,9 +623,10 @@ class _DirectloginPageState extends State<DirectloginPage>
               const SizedBox(width: 12),
               if (userRole == "Director") ...[
                 _buildActionButton(
-                  "Schedule Interview",
+                  "Add staff list",
                   Icons.calendar_today_rounded,
                   Colors.purple,
+                  onTap: () => _navigateTo(const StaffListScreen()),
                 ),
                 const SizedBox(width: 12),
                 _buildActionButton(

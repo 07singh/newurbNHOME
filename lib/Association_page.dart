@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 import '/Add_associate/associate_profile_screen.dart';
 import '/signin_role/sign_role_associate.dart';
 import '/plot_screen/book_plot.dart';
 import '/asscoiate_plot_scren/book_plot.dart';
 import '/screens/add_visit_screen.dart';           // NEW
 import '/screens/total_visits_screen.dart';         // NEW
-import '/screens/total_commission_screen.dart';       // NEW
-import '/screens/commission_received_screen.dart';   // NEW
+import '/screens/total_commission_screen.dart';     // NEW
+import '/screens/commission_received_screen.dart'; // NEW
 import '/screens/book_plot_screen.dart';
-import'/screens/commission_received_screen.dart';
+
+// Fixed duplicate import
+// import '/screens/commission_received_screen.dart'; // REMOVED
 
 class AssociateDashboardPage extends StatefulWidget {
   final String userName;
@@ -111,7 +115,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       isCurrency: true,
     ),
     DashboardItem(
-      title: "Add Visit",
+      title: "",
       icon: Icons.add_location_alt,
       color: Colors.blue,
       count: _dashboardData['addVisit']['count'],
@@ -191,14 +195,14 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add new visit/booking'))),
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TotalBookingListScreen())),
         backgroundColor: Colors.deepPurple,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  // DUMMY PHOTO + API NAME
+  // PROFILE PIC FROM LOGIN (NO DUMMY IF URL EXISTS)
   Widget _buildWelcomeHeader() {
     return Container(
       width: double.infinity,
@@ -210,18 +214,12 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-              image: DecorationImage(
-                image: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                    ? NetworkImage(_profileImageUrl!)
-                    : const AssetImage('assets/download (1).jpeg') as ImageProvider, // DUMMY PHOTO
-                fit: BoxFit.cover,
-              ),
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.white,
+            child: CircleAvatar(
+              radius: 28,
+              backgroundImage: _getProfileImageProvider(),
             ),
           ),
           const SizedBox(width: 16),
@@ -231,7 +229,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               children: [
                 const Text("Welcome back!", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text(_userName, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold)), // API NAME
+                Text(_userName, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(_userRole, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
               ],
@@ -302,29 +300,29 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             return DashboardCard(
               item: item,
               onTap: () {
-                // NEW NAVIGATION LOGIC
                 if (item.title == "My Booking") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()));
-                }
-                else if (item.title == "Book Plot") {
+                } else if (item.title == "Book Plot") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreen()));
-                }
-                else if (item.title == "Add Visit") {
+                } else if (item.title == "Total Booking") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const TotalBookingListScreen()));
-                }
-
-
-                else if (item.title == "Commission Received") {
+                } else if (item.title == "Total Visits") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const  TotalBookingListScreen()));
+                } else if (item.title == "Commission Received") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CommissionListScreen(
-                       // Replace with actual phone variable
-                      ),
+                      builder: (context) => CommissionListScreen(phone: widget.phone), // Correct
                     ),
                   );
-                }
-                else {
+                } else if (item.title == "Commission Received") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CommissionListScreen(phone: widget.phone),
+                    ),
+                  );
+                } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("${item.title} clicked"), backgroundColor: item.color),
                   );
@@ -364,7 +362,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  // DUMMY PHOTO + API NAME + PHONE NUMBER
+  // DRAWER WITH LOGIN PROFILE PIC
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
@@ -379,24 +377,18 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               decoration: BoxDecoration(color: Colors.deepPurple.shade800),
               child: Column(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      image: DecorationImage(
-                        image: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                            ? NetworkImage(_profileImageUrl!)
-                            : const AssetImage('assets/download (1).jpeg') as ImageProvider, // DUMMY PHOTO
-                        fit: BoxFit.cover,
-                      ),
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.white,
+                    child: CircleAvatar(
+                      radius: 38,
+                      backgroundImage: _getProfileImageProvider(),
                     ),
                   ),
                   const SizedBox(height: 15),
-                  Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), // API NAME
+                  Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
-                  Text(widget.phone, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)), // PHONE NUMBER
+                  Text(widget.phone, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -472,6 +464,19 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       trailing: const Icon(Icons.chevron_right, color: Colors.white54, size: 18),
       onTap: () => _handleDrawerItemClick(title),
     );
+  }
+
+  // REUSABLE: Get profile image with fallback
+  ImageProvider _getProfileImageProvider() {
+    if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+      return CachedNetworkImageProvider(
+        _profileImageUrl!,
+        errorListener: (error) {
+          // Optional: log error
+        },
+      );
+    }
+    return const AssetImage('assets/images/default_avatar.png');
   }
 }
 

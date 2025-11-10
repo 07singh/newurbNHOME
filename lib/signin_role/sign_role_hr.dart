@@ -3,6 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/service/login_service.dart';
 import '/Model/login_model.dart';
 import '/HRdashboad/HrDashboard.dart'; // HR dashboard import
+import '/service/auth_manager.dart';
+import '/Model/user_session.dart';
 
 class SignInPageh extends StatefulWidget {
   const SignInPageh({super.key});
@@ -37,12 +39,26 @@ class _SignInPagehState extends State<SignInPageh> {
       if (loginData != null && loginData.statuscode.toLowerCase() == "success") {
         // Only HR can login
         if ((loginData.position ?? '').toLowerCase() == 'hr') {
-          // Store user details securely
+          // Store user details securely (keeping for backward compatibility)
           await storage.write(key: 'user_id', value: loginData.id.toString());
           await storage.write(key: 'user_name', value: loginData.name ?? '');
           await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
           await storage.write(key: 'user_role', value: loginData.position ?? '');
           await storage.write(key: 'profile_pic', value: loginData.profilePic ?? '');
+
+          // Save session using Hive for persistent login
+          final session = UserSession.fromLogin(
+            userId: loginData.id.toString(),
+            userName: loginData.name ?? 'Unknown',
+            userMobile: loginData.mobile ?? '',
+            userRole: loginData.position ?? 'HR',
+            loginType: 'hr',
+            profilePic: loginData.profilePic,
+            phone: loginData.mobile,
+            position: loginData.position,
+          );
+          
+          await AuthManager.saveSession(session);
 
           // Navigate to HR Dashboard
           Navigator.pushReplacement(
@@ -94,7 +110,7 @@ class _SignInPagehState extends State<SignInPageh> {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.green.shade400, Colors.teal.shade400],
+            colors: [Colors.blue.shade400, Colors.purple.shade400],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -130,7 +146,7 @@ class _SignInPagehState extends State<SignInPageh> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.teal,
+                        color: Colors.blueAccent,
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -142,7 +158,7 @@ class _SignInPagehState extends State<SignInPageh> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: const Icon(Icons.phone, color: Colors.teal),
+                        prefixIcon: const Icon(Icons.phone, color: Colors.blueAccent),
                       ),
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Enter your phone number' : null,
@@ -156,7 +172,7 @@ class _SignInPagehState extends State<SignInPageh> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: const Icon(Icons.lock, color: Colors.teal),
+                        prefixIcon: const Icon(Icons.lock, color: Colors.blueAccent),
                       ),
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your password' : null,
@@ -171,7 +187,7 @@ class _SignInPagehState extends State<SignInPageh> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          backgroundColor: Colors.teal,
+                          backgroundColor: Colors.blueAccent,
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)

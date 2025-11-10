@@ -6,10 +6,17 @@ import '/signin_role/sign_role_associate.dart';
 import '/plot_screen/book_plot.dart';
 import '/asscoiate_plot_scren/book_plot.dart';
 import '/screens/add_visit_screen.dart';           // NEW
-import '/screens/total_visits_screen.dart';         // NEW
+import '/screens/payment.dart';         // NEW
 import '/screens/total_commission_screen.dart';     // NEW
 import '/screens/commission_received_screen.dart'; // NEW
-import '/screens/book_plot_screen.dart';
+import '/screens/MyBookingScreen.dart';
+import '/service/auth_manager.dart';
+import '/service/attendance_manager.dart';
+import '/service/associate_profile_service.dart';
+import '/Model/associate_profile_model.dart';
+import'/screens/payment.dart';
+import '/Employ.dart';
+
 
 // Fixed duplicate import
 // import '/screens/commission_received_screen.dart'; // REMOVED
@@ -21,6 +28,7 @@ class AssociateDashboardPage extends StatefulWidget {
   final String phone;
 
   const AssociateDashboardPage({
+
     super.key,
     required this.userName,
     required this.userRole,
@@ -33,9 +41,21 @@ class AssociateDashboardPage extends StatefulWidget {
 }
 
 class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
+  // User data - will be loaded from API
   late String _userName;
   late String _userRole;
   String? _profileImageUrl;
+  String? _userEmail;
+  String? _userPhone;
+  String? _associateId;
+  
+  // Profile data from API
+  AssociateProfile? _profile;
+  bool _isLoadingProfile = true;
+  String? _profileError;
+  
+  // Services
+  final AssociateProfileService _profileService = AssociateProfileService();
 
   final Map<String, dynamic> _dashboardData = {
     'myBooking': {'count': 12, 'growth': 8.2},
@@ -62,16 +82,116 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize with widget data
     _userName = widget.userName;
     _userRole = widget.userRole;
     _profileImageUrl = widget.profileImageUrl;
+    _userPhone = widget.phone;
+    
+    // Fetch real profile data from API
+    _loadProfileData();
+  }
+  
+  /// Fetches profile data from API and updates UI + Session
+  Future<void> _loadProfileData() async {
+    if (_userPhone == null || _userPhone!.isEmpty) {
+      // Try to get phone from session
+      final session = await AuthManager.getCurrentSession();
+      _userPhone = session?.userMobile ?? session?.phone;
+    }
+    
+    if (_userPhone == null || _userPhone!.isEmpty) {
+      setState(() {
+        _isLoadingProfile = false;
+        _profileError = 'Phone number not available';
+      });
+      return;
+    }
+
+    try {
+      // Fetch profile from API
+      final profile = await _profileService.fetchProfile(_userPhone!);
+      
+      if (profile != null && mounted) {
+        // Debug: Print received profile image URL
+        print('📸 Profile Image URL from API: ${profile.profileImageUrl}');
+        
+        setState(() {
+          _profile = profile;
+          _userName = profile.fullName.isNotEmpty ? profile.fullName : 'Associate';
+          _userEmail = profile.email;
+          _userPhone = profile.phone;
+          _associateId = profile.associateId;
+          
+          // Build profile image URL with better handling
+          if (profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty) {
+            String imageUrl = profile.profileImageUrl!.trim();
+            
+            // Check if URL already starts with http/https
+            if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+              _profileImageUrl = imageUrl;
+            } else {
+              // Remove leading slash if exists
+              if (imageUrl.startsWith('/')) {
+                imageUrl = imageUrl.substring(1);
+              }
+              
+              // If URL already contains a folder path (like "Uploads/"), don't add "Images/"
+              // Otherwise add "Images/" prefix
+              if (imageUrl.contains('/')) {
+                // Already has a path (e.g., "Uploads/file.png")
+                _profileImageUrl = 'https://realapp.cheenu.in/$imageUrl';
+              } else {
+                // Just a filename (e.g., "file.png")
+                _profileImageUrl = 'https://realapp.cheenu.in/Images/$imageUrl';
+              }
+            }
+            
+            print('✅ Final Image URL: $_profileImageUrl');
+          } else {
+            print('⚠️ No profile image URL received from API');
+            _profileImageUrl = null;
+          }
+          
+          _isLoadingProfile = false;
+          _profileError = null;
+        });
+        
+        // Update session with real profile data for auto-login
+        await _updateSessionWithProfile(profile);
+      } else {
+        setState(() {
+          _isLoadingProfile = false;
+          _profileError = 'Profile not found';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+          _profileError = 'Failed to load profile: $e';
+        });
+      }
+    }
+  }
+  
+  /// Updates Hive session with fetched profile data
+  Future<void> _updateSessionWithProfile(AssociateProfile profile) async {
+    try {
+      await AuthManager.updateSession(
+        userName: profile.fullName,
+        profilePic: profile.profileImageUrl,
+      );
+    } catch (e) {
+      print('Error updating session: $e');
+    }
   }
 
   Future<void> _navigateToProfile() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AssociateProfileScreen(phone: widget.phone),
+        builder: (context) => AssociateProfileScreen(phone: _userPhone ?? widget.phone),
       ),
     );
     if (result != null && result is Map<String, String>) {
@@ -80,7 +200,18 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         _userRole = result['position'] ?? _userRole;
         _profileImageUrl = result['profileImageUrl'];
       });
+      // Reload profile data after changes
+      _loadProfileData();
     }
+  }
+  
+  /// Refresh profile data manually
+  Future<void> _refreshProfile() async {
+    setState(() {
+      _isLoadingProfile = true;
+      _profileError = null;
+    });
+    await _loadProfileData();
   }
 
   List<DashboardItem> get items => [
@@ -99,7 +230,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       growth: (_dashboardData['bookPlot']['growth'] as num).toDouble(),
     ),
     DashboardItem(
-      title: "Total Commission",
+      title: "PaymentRecived",
       icon: Icons.attach_money,
       color: Colors.orange,
       count: _dashboardData['totalCommission']['count'],
@@ -130,12 +261,18 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     ),
   ];
 
-  void _handleDrawerItemClick(String title) {
+  void _handleDrawerItemClick(String title) async {
     Navigator.pop(context);
 
     if (title == "Logout") {
+      // Clear Hive session
+      await AuthManager.clearSession();
+      // Clear attendance state
+      await AttendanceManager.clearCheckIn();
+      
+      // Navigate to role selection screen
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const AssociateLoginScreen()),
+        MaterialPageRoute(builder: (context) => const HomePage()),
             (Route<dynamic> route) => false,
       );
     } else if (title == "My Booking") {
@@ -170,7 +307,14 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData, tooltip: 'Refresh Data'),
+          IconButton(
+            icon: const Icon(Icons.refresh), 
+            onPressed: () {
+              _refreshData();
+              _refreshProfile();
+            }, 
+            tooltip: 'Refresh Data'
+          ),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No new notifications'))),
@@ -184,6 +328,9 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Error banner if profile failed to load
+            if (_buildErrorBanner() != null) _buildErrorBanner()!,
+            
             _buildWelcomeHeader(),
             const SizedBox(height: 20),
             _buildPerformanceStats(),
@@ -202,7 +349,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  // PROFILE PIC FROM LOGIN (NO DUMMY IF URL EXISTS)
+  // PROFILE PIC FROM API - Dynamic with Loading State
   Widget _buildWelcomeHeader() {
     return Container(
       width: double.infinity,
@@ -214,13 +361,25 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: Colors.white,
-            child: CircleAvatar(
-              radius: 28,
-              backgroundImage: _getProfileImageProvider(),
-            ),
+          // Profile Avatar with Loading State
+          Stack(
+            children: [
+              _buildProfileAvatar(radius: 30),
+              if (_profile != null && _profile!.status)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -229,9 +388,19 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               children: [
                 const Text("Welcome back!", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text(_userName, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  _isLoadingProfile ? 'Loading...' : _userName,
+                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 4),
-                Text(_userRole, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+                if (_associateId != null && _associateId!.isNotEmpty)
+                  Text(
+                    'ID: $_associateId',
+                    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                  )
+                else
+                  Text(_userRole, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
               ],
             ),
           ),
@@ -301,25 +470,28 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               item: item,
               onTap: () {
                 if (item.title == "My Booking") {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookingScreen ()));
                 } else if (item.title == "Book Plot") {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreen()));
-                } else if (item.title == "Total Booking") {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const TotalBookingListScreen()));
-                } else if (item.title == "Total Visits") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()));
+                } else if (item.title == "PaymentRecived") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const  PaymentReceivedScreen()));
+                } else if (item.title == "TotalBookingListScreen") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const  TotalBookingListScreen()));
                 } else if (item.title == "Commission Received") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CommissionListScreen(phone: widget.phone), // Correct
+                      builder: (context) => CommissionListScreen(), // Correct
                     ),
                   );
                 } else if (item.title == "Commission Received") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CommissionListScreen(phone: widget.phone),
+                      builder: (context) => CommissionListScreen()
+
+
+
                     ),
                   );
                 } else {
@@ -362,7 +534,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  // DRAWER WITH LOGIN PROFILE PIC
+  // DRAWER WITH DYNAMIC PROFILE DATA
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
@@ -377,24 +549,75 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               decoration: BoxDecoration(color: Colors.deepPurple.shade800),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child: CircleAvatar(
-                      radius: 38,
-                      backgroundImage: _getProfileImageProvider(),
-                    ),
+                  // Profile Avatar with Status Indicator
+                  Stack(
+                    children: [
+                      _buildProfileAvatar(radius: 40),
+                      if (_profile != null && _profile!.status)
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 15),
-                  Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  // User Name with Loading State
+                  Text(
+                    _isLoadingProfile ? 'Loading...' : _userName,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 5),
-                  Text(widget.phone, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+                  // Phone Number
+                  Text(
+                    _userPhone ?? widget.phone,
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
+                  ),
+                  // Email if available
+                  if (_userEmail != null && _userEmail!.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      _userEmail!,
+                      style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: 10),
+                  // Status Badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                    child: const Text("Premium Associate", style: TextStyle(color: Colors.white, fontSize: 12)),
+                    decoration: BoxDecoration(
+                      color: _profile != null && _profile!.status
+                          ? Colors.green.withOpacity(0.3)
+                          : Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _profile != null && _profile!.status ? "Active Associate" : "Premium Associate",
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
                   ),
+                  // Associate ID if available
+                  if (_associateId != null && _associateId!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'ID: $_associateId',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 11,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -466,17 +689,110 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  // REUSABLE: Get profile image with fallback
+  // REUSABLE: Build profile avatar with better image handling
+  Widget _buildProfileAvatar({required double radius}) {
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+      ),
+      child: ClipOval(
+        child: _isLoadingProfile
+            ? Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                ),
+              )
+            : _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: _profileImageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) {
+                      print('❌ Image load error for $url: $error');
+                      return Container(
+                        color: Colors.deepPurple.shade100,
+                        child: Icon(
+                          Icons.person,
+                          size: radius * 1.2,
+                          color: Colors.deepPurple.shade300,
+                        ),
+                      );
+                    },
+                  )
+                : Container(
+                    color: Colors.deepPurple.shade100,
+                    child: Icon(
+                      Icons.person,
+                      size: radius * 1.2,
+                      color: Colors.deepPurple.shade300,
+                    ),
+                  ),
+      ),
+    );
+  }
+  
+  // REUSABLE: Get profile image with fallback and error handling (kept for compatibility)
   ImageProvider _getProfileImageProvider() {
-    if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+    // Priority: 1. Fetched profile image, 2. Widget prop, 3. Default
+    String? imageUrl = _profileImageUrl;
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      print('🖼️ Loading image from: $imageUrl');
+      
       return CachedNetworkImageProvider(
-        _profileImageUrl!,
+        imageUrl,
         errorListener: (error) {
-          // Optional: log error
+          print('❌ Error loading profile image from $imageUrl: $error');
         },
       );
     }
-    return const AssetImage('assets/images/default_avatar.png');
+    
+    print('📷 Using default avatar - no image URL available');
+    // Fallback to default avatar
+    return const AssetImage('assets/logo3.png'); // Using your app logo as fallback
+  }
+  
+  /// Display error message if profile loading failed
+  Widget? _buildErrorBanner() {
+    if (_profileError != null && _profileError!.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _profileError!,
+                style: TextStyle(color: Colors.orange.shade900, fontSize: 13),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.refresh, color: Colors.orange.shade700, size: 20),
+              onPressed: _refreshProfile,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      );
+    }
+    return null;
   }
 }
 

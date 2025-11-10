@@ -69,7 +69,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
                 _buildInfoTile("PAN No", profile.panNo),
                 const SizedBox(height: 20),
 
-                const Text("Documents",
+              /*  const Text("Documents",
                     style:
                     TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 
@@ -77,7 +77,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
 
                 _buildImageCard("Aadhaar Front", baseUrl + (profile.aadharFrontPic ?? '')),
                 _buildImageCard("Aadhaar Back", baseUrl + (profile.aadharBackPic ?? '')),
-                _buildImageCard("PAN Card", baseUrl + (profile.panPic ?? '')),
+                _buildImageCard("PAN Card", baseUrl + (profile.panPic ?? '')),*/
               ],
             ),
           );

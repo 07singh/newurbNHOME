@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/plot_screen/book_plot.dart';
 import '/Add_associate/add_associate_screen.dart';
 import '/emoloyee_file/profile_screen.dart';
@@ -14,6 +16,11 @@ import '/Employ.dart';
 import '/provider/user_provider.dart';
 import'/DirectLogin/add_staff.dart';
 import'/DirectLogin/add_staff_screen.dart';
+import'/DirectLogin/add_visitor_list_screen.dart';
+import '/service/auth_manager.dart';
+import '/service/attendance_manager.dart';
+import '/service/profile_service.dart';
+import '/Model/profile_model.dart';
 
 class DirectloginPage extends StatefulWidget {
   final String? userName; // ✅ Added
@@ -35,11 +42,21 @@ class _DirectloginPageState extends State<DirectloginPage>
   late TabController _tabController;
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
+  // Profile data from API
+  Staff? _profile;
+  bool _isLoadingProfile = true;
+  String? _profileError;
+  
+  // Services
+  final StaffProfileService _profileService = StaffProfileService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadProfileData();
   }
 
   @override
@@ -47,14 +64,86 @@ class _DirectloginPageState extends State<DirectloginPage>
     _tabController.dispose();
     super.dispose();
   }
+  
+  /// Fetches profile data from API and updates UI + Session
+  Future<void> _loadProfileData() async {
+    try {
+      // Get phone and position from storage or session
+      String? phone = await _storage.read(key: 'user_mobile');
+      String? position = widget.userRole ?? await _storage.read(key: 'user_role');
+      
+      // Fallback to session if not in storage
+      if (phone == null || phone.isEmpty) {
+        final session = await AuthManager.getCurrentSession();
+        phone = session?.userMobile ?? session?.phone;
+        position = session?.userRole ?? session?.position;
+      }
+      
+      if (phone == null || phone.isEmpty) {
+        setState(() {
+          _isLoadingProfile = false;
+          _profileError = 'Phone number not available';
+        });
+        return;
+      }
+      
+      print('🌐 Loading Director profile: Phone=$phone, Position=$position');
+      
+      // Fetch profile from API
+      final response = await _profileService.fetchProfile(
+        phone: phone,
+        position: position ?? 'Director',
+      );
+      
+      if (response.staff != null && mounted) {
+        setState(() {
+          _profile = response.staff;
+          _isLoadingProfile = false;
+          _profileError = null;
+        });
+        
+        print('✅ Profile loaded: ${_profile!.fullName}');
+        print('📸 Image URL: ${_profile!.fullProfilePicUrl}');
+        
+        // Update session with real profile data
+        await AuthManager.updateSession(
+          userName: _profile!.fullName,
+          profilePic: _profile!.profilePicUrl,
+          userRole: _profile!.position,
+        );
+      } else {
+        setState(() {
+          _isLoadingProfile = false;
+          _profileError = 'Profile not found';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+          _profileError = 'Failed to load profile: $e';
+        });
+        print('❌ Error loading profile: $e');
+      }
+    }
+  }
+  
+  /// Refresh profile data
+  Future<void> _refreshProfile() async {
+    setState(() {
+      _isLoadingProfile = true;
+      _profileError = null;
+    });
+    await _loadProfileData();
+  }
 
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
 
-    // ✅ Give priority: if passed in widget → use that, else use provider
-    final userName = widget.userName ?? userProvider.name;
-    final userRole = widget.userRole ?? userProvider.role;
+    // ✅ Give priority: API profile → widget props → provider → defaults
+    final userName = _profile?.fullName ?? widget.userName ?? userProvider.name ?? 'User';
+    final userRole = _profile?.position ?? widget.userRole ?? userProvider.role ?? 'Director';
 
     return Scaffold(
       key: _scaffoldKey,
@@ -66,6 +155,9 @@ class _DirectloginPageState extends State<DirectloginPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Error banner if profile failed to load
+            if (_buildErrorBanner() != null) _buildErrorBanner()!,
+            
             _buildWelcomeSection(userName),
             const SizedBox(height: 24),
             _buildStatsOverview(userRole),
@@ -100,6 +192,11 @@ class _DirectloginPageState extends State<DirectloginPage>
         onPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh_rounded, size: 26),
+          onPressed: _refreshProfile,
+          tooltip: 'Refresh Profile',
+        ),
         IconButton(
           icon: const Icon(Icons.notifications_none, size: 26),
           onPressed: () {},
@@ -180,8 +277,8 @@ class _DirectloginPageState extends State<DirectloginPage>
               ),
               _buildDrawerItem(
                 icon: Icons.today_rounded,
-                title: "This Week Visit",
-                onTap: () {},
+                title: "Add visitor list",
+                onTap: () => _navigateTo(const VisitorListScreen ()),
               ),
             ],
             if (userRole == "Associate") ...[
@@ -203,7 +300,7 @@ class _DirectloginPageState extends State<DirectloginPage>
 
   Widget _buildDrawerHeader(String userName, String userRole) {
     return Container(
-      height: 180,
+      height: 220,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -215,24 +312,56 @@ class _DirectloginPageState extends State<DirectloginPage>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.white,
-            backgroundImage: AssetImage('assets/download (1).jpeg'),
+          // Profile Avatar with real image from API
+          Stack(
+            children: [
+              _buildProfileAvatar(radius: 45),
+              if (_profile != null && _profile!.status)
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 12),
           Text(
-            userName,
+            _isLoadingProfile ? 'Loading...' : (_profile?.fullName ?? userName),
             style: const TextStyle(
                 color: Colors.black, fontSize: 18, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
           ),
+          if (_profile?.phone != null && _profile!.phone.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              _profile!.phone,
+              style: TextStyle(
+                color: Colors.black.withOpacity(0.7),
+                fontSize: 12,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
           Text(
-            userRole,
+            _profile?.position ?? userRole,
             style: TextStyle(
               color: Colors.black.withOpacity(0.8),
               fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
+          if (_profile?.staffId != null && _profile!.staffId.isNotEmpty) ...[
+            const SizedBox(height: 8),
+
+          ],
         ],
       ),
     );
@@ -342,9 +471,12 @@ class _DirectloginPageState extends State<DirectloginPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Hello Mr. $userName",
+                  _isLoadingProfile 
+                      ? "Hello, Loading..."
+                      : "Hello Mr. ${_profile?.fullName ?? userName}",
                   style: const TextStyle(
                       color: Colors.black, fontSize: 20, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -362,10 +494,25 @@ class _DirectloginPageState extends State<DirectloginPage>
               ],
             ),
           ),
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.white,
-            backgroundImage: AssetImage('assets/download (1).jpeg'),
+          // Real profile image from API
+          Stack(
+            children: [
+              _buildProfileAvatar(radius: 40),
+              if (_profile != null && _profile!.status)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -747,7 +894,12 @@ class _DirectloginPageState extends State<DirectloginPage>
             child: const Text("Cancel"),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              // Clear Hive session
+              await AuthManager.clearSession();
+              // Clear attendance state
+              await AttendanceManager.clearCheckIn();
+              
               Navigator.pop(context); // Close dialog
 
               // ✅ Navigate to Employ.dart
@@ -826,5 +978,90 @@ class _DirectloginPageState extends State<DirectloginPage>
         ),
       ],
     );
+  }
+  
+  // ------------------ PROFILE AVATAR BUILDER ------------------
+  Widget _buildProfileAvatar({required double radius}) {
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+      ),
+      child: ClipOval(
+        child: _isLoadingProfile
+            ? Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                ),
+              )
+            : _profile?.fullProfilePicUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: _profile!.fullProfilePicUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) {
+                      print('❌ Image load error for $url: $error');
+                      return Container(
+                        color: Color(0xFFFFF8E1),
+                        child: Icon(
+                          Icons.person,
+                          size: radius * 1.2,
+                          color: Color(0xFFFFD700),
+                        ),
+                      );
+                    },
+                  )
+                : Container(
+                    color: Color(0xFFFFF8E1),
+                    child: Icon(
+                      Icons.person,
+                      size: radius * 1.2,
+                      color: Color(0xFFFFD700),
+                    ),
+                  ),
+      ),
+    );
+  }
+  
+  // ------------------ ERROR BANNER ------------------
+  Widget? _buildErrorBanner() {
+    if (_profileError != null && _profileError!.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _profileError!,
+                style: TextStyle(color: Colors.orange.shade900, fontSize: 13),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.refresh, color: Colors.orange.shade700, size: 20),
+              onPressed: _refreshProfile,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+      );
+    }
+    return null;
   }
 }

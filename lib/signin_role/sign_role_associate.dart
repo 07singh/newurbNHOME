@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '/service/associatee_login_new_service.dart';
 import '/Model/associatate_new_login_model.dart';
 import '../Association_page.dart'; // Dashboard page
+import '/service/auth_manager.dart';
+import '/Model/user_session.dart';
 
 class AssociateLoginScreen extends StatefulWidget {
   const AssociateLoginScreen({super.key});
@@ -33,6 +35,23 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
 
       if (response.isSuccess) {
         // ✅ Login successful
+        
+        // Save session using Hive for persistent login
+        // Note: Associate login API doesn't return user details, so we use phone as identifier
+        final phone = phoneController.text.trim();
+        final session = UserSession.fromLogin(
+          userId: phone, // Using phone as userId since API doesn't return ID
+          userName: 'Associate', // Default name, can be updated from profile later
+          userMobile: phone,
+          userRole: 'Associate',
+          loginType: 'associate',
+          profilePic: null, // No profile pic from login API
+          phone: phone,
+          position: 'Associate',
+        );
+        
+        await AuthManager.saveSession(session);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response.message),
@@ -44,10 +63,10 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const AssociateDashboardPage(
-              userName: "Associate",
-              userRole: "Associate",
-              phone: "",
+            builder: (context) => AssociateDashboardPage(
+              userName: 'Associate',
+              userRole: 'Associate',
+              phone: phone,
               profileImageUrl: null,
             ),
           ),

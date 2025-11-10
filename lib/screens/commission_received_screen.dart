@@ -1,79 +1,66 @@
 import 'package:flutter/material.dart';
 
-/// Updated CommissionListScreen – now receives the associate's phone number
 class CommissionListScreen extends StatelessWidget {
-  /// The associate's phone number (passed from the dashboard)
-  final String phone;
+  const CommissionListScreen({super.key});
 
-  const CommissionListScreen({
-    super.key,
-    required this.phone,
-  });
-
-  // Dummy data for now – you can replace this with a network call using `phone`
-  final List<Map<String, dynamic>> commissions = const [
+  final List<Map<String, dynamic>> sampleCommissions = const [
     {
-      "clientName": "Rohit Sharma",
-      "projectName": "Green Regency Phase 2",
-      "commissionAmount": 15000,
-      "status": "Paid",
-      "date": "05-11-2025",
+      'clientName': 'John Doe',
+      'projectName': 'Sunshine Residency',
+      'plotNo': 'A-101',
+      'area': '1200 sqft',
+      'amount': 500000,
+      'date': '2025-11-07',
+      'receivedPayment': 250000,
     },
     {
-      "clientName": "Priya Verma",
-      "projectName": "Defence Enclave Phase 2",
-      "commissionAmount": 20000,
-      "status": "Pending",
-      "date": "02-11-2025",
+      'clientName': 'Jane Smith',
+      'projectName': 'Green Meadows',
+      'plotNo': 'B-205',
+      'area': '900 sqft',
+      'amount': 350000,
+      'date': '2025-11-06',
+      'receivedPayment': 350000,
     },
     {
-      "clientName": "Amit Singh",
-      "projectName": "Sunshine Valley",
-      "commissionAmount": 12000,
-      "status": "Paid",
-      "date": "30-10-2025",
+      'clientName': 'Alex Johnson',
+      'projectName': 'River View',
+      'plotNo': 'C-12',
+      'area': '1500 sqft',
+      'amount': 750000,
+      'date': '2025-11-05',
+      'receivedPayment': 500000,
     },
   ];
 
   @override
   Widget build(BuildContext context) {
-    // You can use `phone` here later, e.g.:
-    // FutureBuilder<List<...>>(future: fetchCommissions(phone), ...)
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Commission List",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFFFD700),
-        iconTheme: const IconThemeData(color: Colors.black),
+        title: const Text("Commission List"),
+        backgroundColor: Colors.deepPurple,
       ),
-      backgroundColor: Colors.white,
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: commissions.length,
+        itemCount: sampleCommissions.length,
         itemBuilder: (context, index) {
-          final item = commissions[index];
+          final c = sampleCommissions[index];
           return Card(
-            elevation: 3,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.symmetric(vertical: 8),
+            elevation: 3,
+            margin: const EdgeInsets.symmetric(vertical: 6),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildRow("Client Name", item["clientName"]),
-                  _buildRow("Project Name", item["projectName"]),
-                  _buildRow("Commission Amount", "₹ ${item["commissionAmount"]}"),
-                  _buildRow(
-                    "Status",
-                    item["status"],
-                    valueColor: item["status"] == "Paid" ? Colors.green : Colors.red,
-                  ),
-                  _buildRow("Date", item["date"]),
+                  _buildRow("Client Name", c['clientName']),
+                  _buildRow("Project Name", c['projectName']),
+                  _buildRow("Plot No", c['plotNo']),
+                  _buildRow("Area", c['area']),
+                  _buildRow("Amount", "₹${c['amount']}"),
+                  _buildRow("Date", c['date']),
+                  _buildRow("Received Payment", "₹${c['receivedPayment']}"),
                 ],
               ),
             ),
@@ -83,21 +70,22 @@ class CommissionListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String title, String value, {Color? valueColor}) {
+  Widget _buildRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
+          SizedBox(
+            width: 140,
+            child: Text(
+              "$label:",
+              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.deepPurple),
+            ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: valueColor ?? Colors.black,
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
           ),
         ],

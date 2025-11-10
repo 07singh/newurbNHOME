@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../HomeScreen.dart';
+import '/service/attendance_manager.dart';
 
 class AttendanceCheckOut extends StatefulWidget {
   final DateTime checkInTime;
@@ -45,29 +46,64 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
   Future<void> _initLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enable location services.')),
+        );
+        return;
+      }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission denied')),
+          );
+          return;
+        }
       }
-      if (permission == LocationPermission.deniedForever) return;
 
-      Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      setState(() => _position = pos);
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permanently denied')),
+        );
+        return;
+      }
 
+      // ✅ Get the most accurate location
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+      );
+
+      setState(() {
+        _position = pos;
+      });
+
+      // ✅ Convert to detailed address
       try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+        List<Placemark> placemarks =
+        await placemarkFromCoordinates(pos.latitude, pos.longitude);
+
         if (placemarks.isNotEmpty) {
           final p = placemarks.first;
           setState(() {
-            _address = '${p.locality ?? ''}, ${p.administrativeArea ?? ''}, ${p.country ?? ''}';
+            _address =
+            '${p.name ?? ''}, ${p.subLocality ?? ''}, ${p.locality ?? ''}, ${p.subAdministrativeArea ?? ''}, ${p.administrativeArea ?? ''}, ${p.postalCode ?? ''}, ${p.country ?? ''}';
           });
         }
-      } catch (_) {}
-    } catch (_) {}
+      } catch (e) {
+        setState(() {
+          _address = 'Unable to fetch address';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _address = 'Error getting location: $e';
+      });
+    }
   }
+
 
   Future<void> _takeCheckOutPhoto() async {
     final XFile? picked = await _picker.pickImage(
@@ -111,6 +147,9 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
     try {
       // Simulate API call or processing delay
       await Future.delayed(const Duration(seconds: 2));
+
+      // Clear check-in state from persistent storage
+      await AttendanceManager.clearCheckIn();
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(

@@ -9,6 +9,9 @@ import '/DirectLogin/DirectLoginPage.dart';
 import '/emoloyee_file/profile_screen.dart';
 import '/DirectLogin/client_visit.dart';
 import '/Add_associate/add_associate_screen.dart';
+import '/Model/add_staff_list.dart'; // ✅ Replace with your AssociateListScreen import if needed
+import '/service/add_staff_list_service.dart'; // example
+import'/Add_associate/add_associate_list_screen.dart';
 
 class AppConstants {
   static const String apiUrl = "https://realapp.cheenu.in/api/associate/add";
@@ -47,14 +50,9 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _sameAsCurrent = false;
-  int _currentIndex = 0;
 
   final Map<String, TextEditingController> _controllers = {
     for (var key in AppConstants.fieldLabels.keys) key: TextEditingController(),
-  };
-
-  final Map<String, FocusNode> _focusNodes = {
-    for (var key in AppConstants.fieldLabels.keys) key: FocusNode(),
   };
 
   final Map<String, File?> _files = {
@@ -65,20 +63,43 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
     for (var key in AppConstants.fileLabels.keys) key: null,
   };
 
-  @override
-  void initState() {
-    super.initState();
-    _focusNodes.forEach((key, node) {
-      node.addListener(() => setState(() {}));
-    });
-  }
+  String? _selectedState;
 
-  @override
-  void dispose() {
-    _controllers.values.forEach((c) => c.dispose());
-    _focusNodes.values.forEach((f) => f.dispose());
-    super.dispose();
-  }
+  final List<String> _indianStates = [
+    'Andhra Pradesh',
+    'Arunachal Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+    'Delhi',
+    'Puducherry',
+    'Jammu and Kashmir',
+    'Ladakh'
+  ];
+
   Future<void> _pickImage(String key) async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -86,26 +107,19 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         allowMultiple: false,
       );
 
-      if (result == null || result.files.single.path == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No file selected")),
-        );
-        return;
-      }
+      if (result == null || result.files.single.path == null) return;
 
       final filePath = result.files.single.path!;
       final file = File(filePath);
 
-      // Check file size
       final fileSize = await file.length();
       if (fileSize > AppConstants.maxFileSizeBytes) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("⚠️ File size exceeds 5MB limit")),
+          const SnackBar(content: Text("⚠ File size exceeds 5MB limit")),
         );
         return;
       }
 
-      // Compress image
       final targetPath =
           "${file.parent.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg";
       final compressedXFile = await FlutterImageCompress.compressAndGetFile(
@@ -114,21 +128,12 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         quality: 60,
       );
 
-      if (compressedXFile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ Failed to compress image")),
-        );
-        return;
-      }
+      if (compressedXFile == null) return;
 
-      // ✅ Convert XFile → File
       final compressedFile = File(compressedXFile.path);
-
-      // Convert to Base64
       final bytes = await compressedFile.readAsBytes();
       final base64Image = base64Encode(bytes);
 
-      // Update UI
       setState(() {
         _files[key] = compressedFile;
         _base64[key] = base64Image;
@@ -139,21 +144,13 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Error picking file: $e")),
+        SnackBar(content: Text("⚠ Error picking file: $e")),
       );
     }
   }
 
-
-
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fix the errors in the form")),
-      );
-      return;
-    }
-
+    if (!_formKey.currentState!.validate()) return;
     for (var key in AppConstants.fileLabels.keys) {
       if (_base64[key] == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -174,7 +171,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         "Email": _controllers["Email"]!.text.trim(),
         "CurrentAddress": _controllers["CurrentAddress"]!.text.trim(),
         "PermanentAddress": _controllers["PermanentAddress"]!.text.trim(),
-        "State": _controllers["State"]!.text.trim(),
+        "State": _selectedState ?? "",
         "City": _controllers["City"]!.text.trim(),
         "Pincode": _controllers["Pincode"]!.text.trim(),
         "AadhaarNo": _controllers["AadhaarNo"]!.text.trim(),
@@ -183,9 +180,9 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         "AadhaarBackPic": _base64["AadhaarBackPic"],
         "PanPic": _base64["PanPic"],
         "Password": _controllers["Password"]!.text.trim(),
-        "Profile_Pic": _base64["ProfilePic"], // ✅ matches backend key
+        "Profile_Pic": _base64["ProfilePic"],
         "Status": true,
-        "AssociateId": "AS${DateTime.now().millisecondsSinceEpoch % 100000}", // simple random ID
+        "AssociateId": "AS${DateTime.now().millisecondsSinceEpoch % 100000}",
         "CreateDate": now.toIso8601String(),
         "JoiningDate": now.toIso8601String(),
         "LoginDate": now.toIso8601String(),
@@ -208,10 +205,9 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      _showDialog("⚠️ Error", "Something went wrong: $e");
+      _showDialog("⚠ Error", "Something went wrong: $e");
     }
   }
-
 
   void _showDialog(String title, String message) {
     showDialog(
@@ -224,12 +220,11 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
             onPressed: () {
               Navigator.pop(context);
               if (title.contains("Success")) {
-                setState(() {
-                  _controllers.forEach((key, c) => c.clear());
-                  _files.updateAll((key, value) => null);
-                  _base64.updateAll((key, value) => null);
-                  _sameAsCurrent = false;
-                });
+                // ✅ After success → Navigate to AssociateListScreen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AssociateListScreen()),
+                );
               }
             },
             child: const Text("OK"),
@@ -287,62 +282,6 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _profilePicField() {
-    final file = _files["ProfilePic"];
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => _pickImage("ProfilePic"),
-          child: CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey.shade300,
-            backgroundImage: file != null ? FileImage(file) : null,
-            child: file == null
-                ? const Icon(Icons.camera_alt, size: 40, color: Colors.black54)
-                : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text("Upload Profile Picture",
-            style: TextStyle(fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      backgroundColor: const Color(0xFFFFD700),
-      currentIndex: _currentIndex,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.black,
-      unselectedItemColor: Colors.grey.shade800,
-      showUnselectedLabels: true,
-      onTap: (index) {
-        setState(() => _currentIndex = index);
-        if (index == 0) {
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const DirectloginPage()));
-        } else if (index == 1) {
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const BookPlotScreen()));
-        } else if (index == 2) {
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const ClientVisitScreen()));
-        } else if (index == 3) {
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const AddAssociateScreen()));
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: "Home"),
-        BottomNavigationBarItem(icon: Icon(Icons.bookmark_rounded), label: "Bookings"),
-        BottomNavigationBarItem(icon: Icon(Icons.visibility_rounded), label: "Client Visit"),
-        BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: "Add Associate"),
-      ],
     );
   }
 
@@ -372,16 +311,48 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         ],
       ),
       _textField("PermanentAddress", "Enter permanent address"),
-      _textField("State", "Enter state"),
+      DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: "State",
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        value: _selectedState,
+        items: _indianStates
+            .map((state) => DropdownMenuItem(value: state, child: Text(state)))
+            .toList(),
+        onChanged: (val) => setState(() => _selectedState = val),
+        validator: (v) => v == null ? "Please select a state" : null,
+      ),
+      const SizedBox(height: 14),
       _textField("City", "Enter city"),
       _textField("Pincode", "Enter 6-digit pincode"),
       _textField("AadhaarNo", "Enter Aadhaar number"),
-      _fileField("AadharFrontPic"),
-      _fileField("AadhaarBackPic"),
+      _fileField("AadharFrontPic", label: "Upload Aadhaar Front"),
+      _fileField("AadhaarBackPic", label: "Upload Aadhaar Back"),
       _textField("PanNo", "Enter PAN number"),
-      _fileField("PanPic"),
+      _fileField("PanPic", label: "Upload PAN Card"),
       _textField("Password", "Enter password", obscure: true),
     ];
+  }
+
+  Widget _fileField(String key, {required String label}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () => _pickImage(key),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppConstants.secondaryColor,
+          minimumSize: const Size(double.infinity, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        icon: const Icon(Icons.upload_file, color: Colors.white),
+        label: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
+      ),
+    );
   }
 
   Widget _textField(String key, String hint, {bool obscure = false}) {
@@ -401,25 +372,25 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
     );
   }
 
-  Widget _fileField(String key) {
-    final fileName = _files[key]?.path.split("/").last ?? "No file chosen";
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(fileName, overflow: TextOverflow.ellipsis),
+  Widget _profilePicField() {
+    final file = _files["ProfilePic"];
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _pickImage("ProfilePic"),
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: file != null ? FileImage(file) : null,
+            child: file == null
+                ? const Icon(Icons.camera_alt, size: 40, color: Colors.black54)
+                : null,
           ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: () => _pickImage(key),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.secondaryColor,
-            ),
-            child: const Text("Choose File"),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        const Text("Upload Profile Picture",
+            style: TextStyle(fontWeight: FontWeight.w500)),
+      ],
     );
   }
 }

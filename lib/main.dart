@@ -10,11 +10,15 @@ import '/signin_role/sign_role_associate.dart';
 import '/plot_screen/hh.dart';
 import '/plot_screen/book_plot.dart';
 import '/provider/user_provider.dart';
+import '/service/auth_manager.dart';
 ///import '/services/real_time_service.dart'; // NEW: Real-time WebSocket
 
 Future<void> main() async {
   // Ensure Flutter bindings are ready
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive for persistent login
+  await AuthManager.initialize();
 
   // Initialize Real-Time Service (Socket.IO)
   //RealTimeService.init();

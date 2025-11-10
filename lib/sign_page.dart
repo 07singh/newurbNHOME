@@ -3,6 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/service/login_service.dart';
 import '/Model/login_model.dart';
 import 'HomeScreen.dart';
+import '/service/auth_manager.dart';
+import '/Model/user_session.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -39,10 +41,25 @@ class _SignInPageState extends State<SignInPage> {
     if (loginData != null && loginData.statuscode == "Success") {
       // ✅ Check if position is TL or Sales
       if (loginData.position == 'TL' || loginData.position == 'Sales Executive') {
+        // Save in secure storage (keeping for backward compatibility)
         await storage.write(key: 'user_id', value: (loginData.id ?? '').toString());
         await storage.write(key: 'user_name', value: loginData.name ?? '');
         await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
         await storage.write(key: 'user_role', value: loginData.position ?? '');
+
+        // Save session using Hive for persistent login
+        final session = UserSession.fromLogin(
+          userId: (loginData.id ?? '').toString(),
+          userName: loginData.name ?? 'Unknown',
+          userMobile: loginData.mobile ?? '',
+          userRole: loginData.position ?? 'Employee',
+          loginType: 'employee',
+          profilePic: loginData.profilePic,
+          phone: loginData.mobile,
+          position: loginData.position,
+        );
+        
+        await AuthManager.saveSession(session);
 
         Navigator.pushReplacement(
           context,

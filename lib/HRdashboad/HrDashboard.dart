@@ -8,6 +8,12 @@ import '/HRdashboad/levee_request_screen.dart';
 import '/HRdashboad/report_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/plot_screen/hrplot.dart';
+import'/DirectLogin/add_visitor_list_screen.dart';
+import'/DirectLogin/add_staff_screen.dart';
+import'/DirectLogin/add_staff.dart';
+import '/service/auth_manager.dart';
+import '/service/attendance_manager.dart';
+import '/Employ.dart';
 
 
 
@@ -31,6 +37,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   late TabController _tabController;
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -383,7 +390,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildActionButton("Add Employee", Icons.person_add_alt_1_rounded, Colors.blue, AddEmployeeScreen()),
+              _buildActionButton("Add staff", Icons.person_add_alt_1_rounded, Colors.blue, AddStaffScreen()),
               const SizedBox(width: 12),
               _buildActionButton("Booking Request", Icons.payment_rounded, Colors.green, PendingRequestsScreen(userRole: widget.userRole)),
               const SizedBox(width: 12),
@@ -391,7 +398,9 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               const SizedBox(width: 12),
               _buildActionButton("booking plot", Icons.calendar_today_rounded, Colors.purple, NoNav()),
               const SizedBox(width: 12),
-              _buildActionButton("Reports", Icons.analytics_rounded, Colors.red, ReportsScreen()),
+              _buildActionButton("Visitor list", Icons.analytics_rounded, Colors.red, VisitorListScreen ()),
+              const SizedBox(width: 12),
+              _buildActionButton("staff List ", Icons.analytics_rounded, Colors.red, StaffListScreen()),
             ],
           ),
         ),
@@ -522,10 +531,24 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     );
   }
 
-  void _performLogout(BuildContext context) {
+  void _performLogout(BuildContext context) async {
+    // Clear Hive session
+    await AuthManager.clearSession();
+    // Clear attendance state
+    await AttendanceManager.clearCheckIn();
+    
+    // Clear secure storage
+    await storage.deleteAll();
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: const Text("Logged out successfully"), backgroundColor: Colors.green.shade600, duration: const Duration(seconds: 2)),
     );
-    Navigator.pushReplacementNamed(context, '/login');
+    
+    // Navigate to Employ.dart (main role selection screen)
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const HomePage()),
+      (route) => false,
+    );
   }
 }

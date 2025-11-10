@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import 'attendenceCheckOut.dart';
+import '/service/attendance_manager.dart';
 
 
 class AttendanceCheckIn extends StatefulWidget {
@@ -32,36 +33,63 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enable location services.')),
+        );
         return;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission denied')),
+          );
+          return;
+        }
       }
-      if (permission == LocationPermission.deniedForever) return;
 
-      Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permanently denied')),
+        );
+        return;
+      }
+
+      // ✅ Get the most accurate location
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+      );
+
       setState(() {
         _position = pos;
       });
 
+      // ✅ Convert to detailed address
       try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+        List<Placemark> placemarks =
+        await placemarkFromCoordinates(pos.latitude, pos.longitude);
+
         if (placemarks.isNotEmpty) {
           final p = placemarks.first;
           setState(() {
-            _address = '${p.locality ?? ''}, ${p.administrativeArea ?? ''}, ${p.country ?? ''}';
+            _address =
+            '${p.name ?? ''}, ${p.subLocality ?? ''}, ${p.locality ?? ''}, ${p.subAdministrativeArea ?? ''}, ${p.administrativeArea ?? ''}, ${p.postalCode ?? ''}, ${p.country ?? ''}';
           });
         }
-      } catch (_) {
-        // ignore geocoding errors
+      } catch (e) {
+        setState(() {
+          _address = 'Unable to fetch address';
+        });
       }
     } catch (e) {
-      // ignore
+      setState(() {
+        _address = 'Error getting location: $e';
+      });
     }
   }
+
 
   Future<void> _performCheckIn() async {
     if (_isCheckingIn) return;
@@ -93,16 +121,25 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
         await _initLocation();
       }
 
-      // 3. Simulate API call or processing delay
+      // 3. Save check-in state to persistent storage
+      final checkInTime = DateTime.now();
+      await AttendanceManager.saveCheckIn(
+        checkInTime: checkInTime,
+        checkInPhoto: _photo,
+        checkInPosition: _position,
+        checkInAddress: _address,
+      );
+
+      // 4. Simulate API call or processing delay
       await Future.delayed(const Duration(milliseconds: 1500));
 
-      // 4. Navigate to CheckOut page with data
+      // 5. Navigate to CheckOut page with data
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => AttendanceCheckOut(
-              checkInTime: DateTime.now(),
+              checkInTime: checkInTime,
               checkInPhoto: _photo,
               checkInPosition: _position,
               checkInAddress: _address,

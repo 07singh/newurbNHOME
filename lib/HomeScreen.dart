@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/emoloyee_file/profile_screen.dart';
-import 'EmployeeDashboard/attendenceCheckIn.dart';
+import 'EmployeeDashboard/attendance_router.dart';
 import 'today_flowup_page.dart';
 import 'week_flowup_page.dart';
 import 'total_flowup_page.dart';
@@ -10,6 +10,9 @@ import 'add_header_page.dart';
 import '/sign_page.dart';
 import'/DirectLogin/add_visitor_screen.dart';
 import'/DirectLogin/add_visitor_list_screen.dart';
+import '/service/auth_manager.dart';
+import '/service/attendance_manager.dart';
+import '/Employ.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userName;
@@ -185,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AttendanceCheckIn()),
+                  MaterialPageRoute(builder: (context) => const AttendanceRouter()),
                 );
               },
 
@@ -213,10 +216,18 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: Icon(Icons.exit_to_app, color: Colors.red.shade600),
               title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.w500)),
               onTap: () async {
+                // Clear Hive session
+                await AuthManager.clearSession();
+                // Clear attendance state
+                await AttendanceManager.clearCheckIn();
+                // Also clear secure storage for backward compatibility
                 await _storage.deleteAll();
-                Navigator.pushReplacement(
+                
+                // Navigate to role selection screen
+                Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const SignInPage()),
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                  (route) => false,
                 );
               },
             ),

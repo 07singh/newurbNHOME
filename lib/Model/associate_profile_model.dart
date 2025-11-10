@@ -40,6 +40,19 @@ class AssociateProfile {
   });
 
   factory AssociateProfile.fromJson(Map<String, dynamic> json) {
+    // Try multiple possible keys for profile image
+    String? getProfileImageUrl(Map<String, dynamic> json) {
+      // Try different possible field names from API
+      return json['profileImageUrl'] ?? 
+             json['ProfileImageUrl'] ?? 
+             json['ProfilePic'] ?? 
+             json['Profilepic'] ?? 
+             json['profile_pic'] ?? 
+             json['profilePic'] ??
+             json['ImageUrl'] ??
+             json['image_url'];
+    }
+    
     return AssociateProfile(
       id: json['Id'] ?? 0,
       fullName: json['FullName'] ?? '',
@@ -55,10 +68,10 @@ class AssociateProfile {
       associateId: json['AssociateId'] ?? '',
       loginDate: json['LoginDate'],
       logoutDate: json['LogoutDate'],
-      profileImageUrl: json['profileImageUrl'],
-      aadharFrontPic: json['Aadharfrontpic'],
-      aadharBackPic: json['Aadharbackpic'],
-      panPic: json['Panpic'],
+      profileImageUrl: getProfileImageUrl(json),
+      aadharFrontPic: json['Aadharfrontpic'] ?? json['AadharFrontPic'],
+      aadharBackPic: json['Aadharbackpic'] ?? json['AadharBackPic'],
+      panPic: json['Panpic'] ?? json['PanPic'],
     );
   }
 }

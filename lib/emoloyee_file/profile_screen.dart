@@ -41,8 +41,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Profile"),
-        backgroundColor: Colors.blue.shade700,
+        title: Text(
+          'Profile',
+          style: TextStyle(
+            color: Colors.black, // Black text color
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.yellow, // Yellow background
+        foregroundColor: Colors.black, // Black for back button and icons
         elevation: 0,
       ),
       body: FutureBuilder<StaffProfileResponse>(

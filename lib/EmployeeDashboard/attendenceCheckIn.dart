@@ -7,15 +7,13 @@ import 'package:intl/intl.dart';
 
 import 'attendenceCheckOut.dart';
 import '/service/attendance_manager.dart';
+import '/service/attendance_service.dart';
 import '/service/auth_manager.dart';
+import '/Model/attendance_model.dart';
 import '/Model/login_model.dart';
 import '/Model/user_session.dart';
 
-/// Optimized Attendance Check-In Screen
-/// - Integrated with user session management
-/// - Improved error handling and loading states
-/// - Better location handling with caching
-/// - Performance optimized with proper disposal
+
 class AttendanceCheckIn extends StatefulWidget {
   const AttendanceCheckIn({super.key});
 
@@ -246,13 +244,52 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
         throw Exception('Failed to save check-in data locally.');
       }
 
-      // 4. Show success feedback
+      // 4. Submit attendance to server
       if (mounted) {
-        _showSuccess('Check-in captured successfully!');
+        _showSuccess('Submitting attendance to server...');
       }
 
-      // 5. Navigate to checkout page with data
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Debug: Print values being sent
+      debugPrint('🔍 Submitting with:');
+      debugPrint('   userName: ${_currentUser!.userName}');
+      debugPrint('   userMobile: ${_currentUser!.userMobile}');
+      debugPrint('   checkInTime: ${checkInTime.toIso8601String()}');
+      debugPrint('   latitude: ${_position!.latitude}');
+      debugPrint('   longitude: ${_position!.longitude}');
+
+      final attendanceResponse = await AttendanceService.submitAttendance(
+        employeeName: _currentUser!.userName ?? 'Unknown',
+        mobile: _currentUser!.userMobile ?? '',
+        checkInTime: checkInTime.toIso8601String(),
+        latitude: _position!.latitude,
+        longitude: _position!.longitude,
+        address: _address,
+        imageFile: photoFile,
+      );
+
+      // 5. Handle server response
+      if (attendanceResponse != null) {
+        if (attendanceResponse.isSuccess) {
+          if (mounted) {
+            _showSuccess('✅ Attendance saved successfully!');
+          }
+          debugPrint('✅ Server response: ${attendanceResponse.message}');
+        } else {
+          if (mounted) {
+            final errorMsg = attendanceResponse.message ?? 'Failed to submit attendance';
+            _showError('⚠️ $errorMsg');
+          }
+          debugPrint('❌ Server error: ${attendanceResponse.message}');
+        }
+      } else {
+        if (mounted) {
+          _showError('Failed to get server response. Data saved locally.');
+        }
+        debugPrint('❌ No response from server');
+      }
+
+      // 6. Navigate to checkout page with data
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -322,6 +359,7 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -345,13 +383,14 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _initLocation,
-        color: const Color(0xFF6B46FF),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16),
-          child: Column(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _initLocation,
+          color: const Color(0xFF6B46FF),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 6),
@@ -363,6 +402,19 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF6B46FF),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 8),
+
+              // User mobile number
+              Text(
+                _currentUser?.userMobile ?? '',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -483,6 +535,7 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
               const SizedBox(height: 60),
             ],
           ),
+        ),
         ),
       ),
     );

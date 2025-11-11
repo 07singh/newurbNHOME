@@ -8,7 +8,9 @@ import 'package:intl/intl.dart';
 
 import '../HomeScreen.dart';
 import '/service/attendance_manager.dart';
+import '/service/attendance_service.dart';
 import '/service/auth_manager.dart';
+import '/Model/attendance_model.dart';
 import '/Model/login_model.dart';
 import '/Model/user_session.dart';
 
@@ -302,48 +304,88 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
       final checkOutTime = DateTime.now();
       final duration = checkOutTime.difference(widget.checkInTime);
 
-      // TODO: Send attendance data to server API
-      // final response = await AttendanceService.submitAttendance(
-      //   userId: _currentUser!.userId!,
-      //   userName: _currentUser!.userName,
-      //   checkInTime: widget.checkInTime,
-      //   checkOutTime: checkOutTime,
-      //   checkInPhoto: widget.checkInPhoto,
-      //   checkOutPhoto: _photo,
-      //   checkInLocation: widget.checkInPosition,
-      //   checkOutLocation: _position,
-      //   checkInAddress: widget.checkInAddress,
-      //   checkOutAddress: _address,
-      //   duration: duration,
-      // );
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Clear check-in state from persistent storage
-      await AttendanceManager.clearCheckIn();
-
-      // Show success message with duration
-      if (mounted) {
-        final hours = duration.inHours;
-        final minutes = duration.inMinutes.remainder(60);
-        _showSuccess('Checked out successfully! Duration: ${hours}h ${minutes}m');
+      // Prepare location strings
+      String checkInLocation = widget.checkInAddress ?? '';
+      if (checkInLocation.isEmpty && widget.checkInPosition != null) {
+        checkInLocation = 'Lat: ${widget.checkInPosition!.latitude.toStringAsFixed(6)}, Long: ${widget.checkInPosition!.longitude.toStringAsFixed(6)}';
       }
 
-      // Navigate back to home
-      await Future.delayed(const Duration(seconds: 2));
+      String checkOutLocation = _address ?? '';
+      if (checkOutLocation.isEmpty && _position != null) {
+        checkOutLocation = 'Lat: ${_position!.latitude.toStringAsFixed(6)}, Long: ${_position!.longitude.toStringAsFixed(6)}';
+      }
 
+      // Debug: Print values being sent
+      debugPrint('🔍 Submitting checkout with:');
+      debugPrint('   userName: ${_currentUser!.userName}');
+      debugPrint('   userMobile: ${_currentUser!.userMobile}');
+      debugPrint('   checkInTime: ${widget.checkInTime.toIso8601String()}');
+      debugPrint('   checkOutTime: ${checkOutTime.toIso8601String()}');
+      debugPrint('   checkInLocation: $checkInLocation');
+      debugPrint('   checkOutLocation: $checkOutLocation');
+      debugPrint('   duration: ${duration.inHours}h ${duration.inMinutes.remainder(60)}m');
+
+      // Show submitting message
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
+        _showSuccess('Submitting check-out to server...');
+      }
+
+      // Send complete attendance data to server API
+      final attendanceResponse = await AttendanceService.submitCompleteAttendance(
+        employeeName: _currentUser!.userName ?? 'Unknown',
+        mobile: _currentUser!.userMobile ?? '',
+        checkInTime: widget.checkInTime.toIso8601String(),
+        checkOutTime: checkOutTime.toIso8601String(),
+        checkInLocation: checkInLocation,
+        checkOutLocation: checkOutLocation,
+        checkInImageFile: widget.checkInPhoto,
+        checkOutImageFile: _photo,
+      );
+
+      // Handle server response
+      if (attendanceResponse != null) {
+        if (attendanceResponse.isSuccess) {
+          // Clear check-in state from persistent storage
+          await AttendanceManager.clearCheckIn();
+
+          // Show success message with duration
+          if (mounted) {
+            final hours = duration.inHours;
+            final minutes = duration.inMinutes.remainder(60);
+            _showSuccess('✅ Check-Out saved successfully! Duration: ${hours}h ${minutes}m');
+          }
+
+          debugPrint('✅ Server response: ${attendanceResponse.message}');
+          debugPrint('✅ Hours worked: ${attendanceResponse.hoursWorked ?? 'N/A'}');
+
+          // Navigate back to home after delay
+          await Future.delayed(const Duration(seconds: 2));
+
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
               (route) => false,
-        );
+            );
+          }
+        } else {
+          if (mounted) {
+            final errorMsg = attendanceResponse.message ?? 'Failed to submit check-out';
+            _showError('⚠️ $errorMsg');
+          }
+          debugPrint('❌ Server error: ${attendanceResponse.message}');
+        }
+      } else {
+        if (mounted) {
+          _showError('Failed to get server response. Please try again.');
+        }
+        debugPrint('❌ No response from server');
       }
     } catch (e) {
       if (mounted) {
         _showError('Check-out failed: ${e.toString()}');
       }
+      debugPrint('❌ Checkout error: $e');
     } finally {
       if (mounted) {
         setState(() => _isCheckingOut = false);
@@ -400,6 +442,7 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
     return WillPopScope(
       onWillPop: () async => !_isCheckingOut,
       child: Scaffold(
+        resizeToAvoidBottomInset: true,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -423,13 +466,14 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
             ),
           ],
         ),
-        body: RefreshIndicator(
-          onRefresh: _initLocation,
-          color: const Color(0xFF4ADE80),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16),
-            child: Column(
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _initLocation,
+            color: const Color(0xFF4ADE80),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 6),
@@ -441,6 +485,19 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF4ADE80),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 8),
+
+                // User mobile number
+                Text(
+                  _currentUser?.userMobile ?? '',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -527,6 +584,7 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
                 const SizedBox(height: 40),
               ],
             ),
+          ),
           ),
         ),
       ),

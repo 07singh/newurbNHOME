@@ -21,6 +21,7 @@ import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/service/profile_service.dart';
 import '/Model/profile_model.dart';
+import '/EmployeeDashboard/attendanceHistory.dart';
 
 class DirectloginPage extends StatefulWidget {
   final String? userName; // ✅ Added
@@ -552,7 +553,7 @@ class _DirectloginPageState extends State<DirectloginPage>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AttendanceScreen(),
+                      builder: (context) => AttendanceScreent(),
                     ),
                   );
                 },

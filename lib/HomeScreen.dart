@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/emoloyee_file/profile_screen.dart';
+import 'EmployeeDashboard/attendanceHistory.dart';
 import 'EmployeeDashboard/attendance_router.dart';
 import 'today_flowup_page.dart';
 import 'week_flowup_page.dart';
@@ -197,9 +198,9 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.fact_check, color: Colors.green),
               title: const Text('Attendance Record', style: TextStyle(fontWeight: FontWeight.w500)),
               onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Attendance Record clicked')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AttendanceScreent()),
                 );
               },
             ),

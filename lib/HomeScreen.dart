@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '/emoloyee_file/profile_screen.dart';
+import '/emoloyee_file/profile_screenforemployee.dart';
+import 'DirectLogin/add_visitorem.dart' show AddVisitorScreenem;
 import 'EmployeeDashboard/attendanceHistory.dart';
 import 'EmployeeDashboard/attendance_router.dart';
 import 'today_flowup_page.dart';
@@ -10,7 +11,7 @@ import 'total_flowup_page.dart';
 import 'add_header_page.dart';
 import '/sign_page.dart';
 import'/DirectLogin/add_visitor_screen.dart';
-import'/DirectLogin/add_visitor_list_screen.dart';
+import'/DirectLogin/addVisitorlistforem.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/Employ.dart';
@@ -87,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProfileScreen(phone: _userPhone ?? ''),
+        builder: (context) => ProfileScreenem (phone: _userPhone ?? ''),
       ),
     );
     if (result != null && result is Map<String, String>) {
@@ -320,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.list_alt_rounded,
                     Colors.green,
                     LinearGradient(colors: [Colors.green, Colors.lightGreen]),
-                    VisitorListScreen(),
+                    VisitorListScreenem(),
                   ),
                   const SizedBox(width: 12),
                   _buildFlowUpButton(
@@ -329,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.add_box_rounded,
                     Colors.orange,
                     LinearGradient(colors: [Colors.orange, Colors.deepOrange]),
-                    AddVisitorScreen(),
+                    AddVisitorScreenem(),
                   ),
                 ],
               ),

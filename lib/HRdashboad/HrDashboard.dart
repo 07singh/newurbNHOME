@@ -14,11 +14,6 @@ import'/DirectLogin/add_staff_screen.dart';
 import'/DirectLogin/add_staff.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
-import '/service/login_service.dart';
-import '/service/profile_service.dart';
-import '/Model/login_model.dart';
-import '/Model/user_session.dart';
-import '/Model/profile_model.dart';
 import '/Employ.dart';
 
 
@@ -44,66 +39,11 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final storage = const FlutterSecureStorage();
-  final StaffProfileService _profileService = StaffProfileService();
-  
-  // Profile data from API
-  Staff? _profileData;
-  bool _isLoadingProfile = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
-    // Debug: Print user data for verification
-    debugPrint('🔍 HR Dashboard initialized');
-    debugPrint('   User Name: ${widget.userName}');
-    debugPrint('   User Role: ${widget.userRole}');
-    debugPrint('   Profile Image URL: ${widget.profileImageUrl}');
-    debugPrint('   Full Image URL: ${_getProfileImageUrl()}');
-    
-    // Load profile data from API
-    _loadProfileData();
-  }
-  
-  /// Load profile data from API to get latest image and info
-  Future<void> _loadProfileData() async {
-    setState(() => _isLoadingProfile = true);
-    
-    try {
-      // Get phone and position from storage or widget
-      final phone = await storage.read(key: 'user_mobile') ?? '';
-      final position = await storage.read(key: 'user_role') ?? widget.userRole;
-      
-      debugPrint('📱 Loading profile for phone: $phone, position: $position');
-      
-      if (phone.isNotEmpty) {
-        final response = await _profileService.fetchProfile(
-          phone: phone,
-          position: position,
-        );
-        
-        if (response.staff != null && mounted) {
-          setState(() {
-            _profileData = response.staff;
-            _isLoadingProfile = false;
-          });
-          
-          debugPrint('✅ Profile loaded successfully');
-          debugPrint('   Name: ${_profileData?.fullName}');
-          debugPrint('   Position: ${_profileData?.position}');
-          debugPrint('   Profile Image: ${_profileData?.fullProfilePicUrl}');
-        }
-      } else {
-        debugPrint('⚠️ Phone number not available in storage');
-        setState(() => _isLoadingProfile = false);
-      }
-    } catch (e) {
-      debugPrint('❌ Error loading profile: $e');
-      if (mounted) {
-        setState(() => _isLoadingProfile = false);
-      }
-    }
   }
 
   @override
@@ -115,44 +55,11 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   Future<void> _navigateToProfile() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ProfileScreen()),
+      MaterialPageRoute(builder: (context) =>   ProfileScreen()),
     );
-    
-    // Reload profile data when returning from profile screen
-    if (mounted) {
-      debugPrint('🔄 Returned from profile screen, reloading data...');
-      await _loadProfileData();
+    if (result != null && result is Map<String, String>) {
+      setState(() {});
     }
-  }
-
-  /// Get full profile image URL - prioritizes API data over widget data
-  String? _getProfileImageUrl() {
-    // First, try to use profile data from API (latest/freshest)
-    if (_profileData != null) {
-      return _profileData!.fullProfilePicUrl;
-    }
-    
-    // Fallback to widget data if API data not loaded yet
-    if (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty) {
-      // If already a full URL, return as is
-      if (widget.profileImageUrl!.startsWith('http')) {
-        return widget.profileImageUrl;
-      }
-      // Otherwise, construct full URL with base URL
-      return "https://realapp.cheenu.in/Images/${widget.profileImageUrl}";
-    }
-    
-    return null;
-  }
-  
-  /// Get display name - prioritizes API data
-  String _getDisplayName() {
-    return _profileData?.fullName ?? widget.userName;
-  }
-  
-  /// Get display role - prioritizes API data
-  String _getDisplayRole() {
-    return _profileData?.position ?? widget.userRole;
   }
 
   @override
@@ -225,51 +132,22 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
-                      color: Colors.grey.shade200,
-                    ),
-                    child: ClipOval(
-                      child: _getProfileImageUrl() != null
-                          ? Image.network(
-                              _getProfileImageUrl()!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey.shade300,
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 40,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                    color: Colors.white,
-                                  ),
-                                );
-                              },
-                            )
-                          : Icon(
-                              Icons.person,
-                              size: 40,
-                              color: Colors.grey.shade600,
-                            ),
+                      image: DecorationImage(
+                        image: (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty)
+                            ? NetworkImage(widget.profileImageUrl!) as ImageProvider
+                            : const AssetImage('assets/download (1).jpeg'), // Dummy if no URL
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _getDisplayName(),
+                    widget.userName,
                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _getDisplayRole(),
+                    widget.userRole,
                     style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
                   ),
                 ],
@@ -366,12 +244,12 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Good Morning, ${_getDisplayName()}!",
+                  "Good Morning, ${widget.userName}!",
                   style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Here's your ${_getDisplayRole()} dashboard overview for today",
+                  "Here's your ${widget.userRole} dashboard overview for today",
                   style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
                 ),
                 const SizedBox(height: 16),
@@ -393,41 +271,12 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 3),
-              color: Colors.white,
-            ),
-            child: ClipOval(
-              child: _getProfileImageUrl() != null
-                  ? Image.network(
-                      _getProfileImageUrl()!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey.shade300,
-                          child: Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Colors.grey.shade600,
-                          ),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.blue,
-                          ),
-                        );
-                      },
-                    )
-                  : Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.grey.shade600,
-                    ),
+              image: DecorationImage(
+                image: (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty)
+                    ? NetworkImage(widget.profileImageUrl!) as ImageProvider
+                    : const AssetImage('assets/download (1).jpeg'), // Dummy if no URL
+                fit: BoxFit.cover,
+              ),
             ),
           ),
         ],

@@ -35,7 +35,7 @@ class _LeaveRequestsScreenState extends State<LeaveRequestsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Leave Requests"),
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.blueAccent,
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),

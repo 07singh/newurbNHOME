@@ -16,14 +16,14 @@ class NoNav extends StatelessWidget {
         title: const Text(
           'Book Plot',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFFFFD700),
-        iconTheme: const IconThemeData(color: Colors.black),
+        backgroundColor: const Color(0xFF0080FF),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
         child: Column(

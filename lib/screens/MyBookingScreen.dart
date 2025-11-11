@@ -44,11 +44,11 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
         title: const Text(
           "My Bookings",
           style: TextStyle(
-              color: Colors.black, fontWeight: FontWeight.w700, fontSize: 18),
+              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
         ),
-        backgroundColor: const Color(0xFFFFD700),
+        backgroundColor: const Color(0xFF871BBF),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
       body: ListView.builder(
@@ -111,7 +111,7 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
                         color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: Colors.purple,
                     minimumSize: const Size(double.infinity, 44),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import'/DirectLogin/DirectLoginPage.dart';
+import'/DirectLogin/add_staff_screen.dart';
 
 class AddStaffScreen extends StatefulWidget {
   const AddStaffScreen({Key? key}) : super(key: key);
@@ -123,7 +125,15 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
           final data = jsonDecode(response.body);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("✅ ${data['message']}")),
+
+
           );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const StaffListScreen()),
+          );
+
+
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("❌ Failed: ${response.body}")),
@@ -160,12 +170,30 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Add Staff", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.blue.shade700,
-        iconTheme: const IconThemeData(color: Colors.white),
-        centerTitle: true,
+
+
+    appBar: AppBar(
+    title: const Text(
+      "Add Staff",
+      style: TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
       ),
+    ),
+    backgroundColor: Colors.blue.shade700,
+    centerTitle: true,
+    leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () {
+    Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (context) => const DirectloginPage()),
+    (Route<dynamic> route) => false, // ✅ Clears all previous screens
+    );
+    },
+    ),
+    ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(

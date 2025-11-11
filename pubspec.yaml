@@ -105,9 +105,9 @@ flutter:
   assets:
     - assets/logo3.png
     - assets/playstore.png
-    - assets/imglogo8.png
-    - assets/imglogo9.png
-    - assets/download (1).jpeg
+    - assets/imglogo8.webp
+    - assets/imglogo8.webp
+
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

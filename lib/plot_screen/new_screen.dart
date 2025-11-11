@@ -291,7 +291,7 @@ class _BookingDialogState extends State<BookingDialog> {
   final _formKey = GlobalKey<FormState>();
   double _totalAmount = 0;
 
-  final List<String> _paidThroughOptions = ['Cash', 'Online Transfer', 'Cheque'];
+  final List<String> _paidThroughOptions = ['Cash', 'Online Transfer', 'Cheque','RTGS','NEFT'];
   String _selectedPaidThrough = 'Online Transfer';
 
   @override
@@ -749,17 +749,28 @@ class _BookingDialogState extends State<BookingDialog> {
                       ),
 
                       // Booking Date + Calendar
-                      _buildTextField(
-                        controller: _bookingDateController,
-                        label: 'Booking Date',
-                        icon: Icons.calendar_today,
-                        readOnly: true,
-                        validator: (v) => DateTime.tryParse(v!) == null ? 'Invalid date' : null,
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _selectDate,
-                        icon: const Icon(Icons.date_range),
-                        label: const Text('Pick Date'),
+                      // 📅 Booking Date (TextField + Pick Button in same row)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: _bookingDateController,
+                              label: 'Booking Date',
+                              icon: Icons.calendar_today,
+                              readOnly: true,
+                              validator: (v) => DateTime.tryParse(v ?? '') == null ? 'Invalid date' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: _selectDate,
+                            icon: const Icon(Icons.date_range),
+                            label: const Text('Pick'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                            ),
+                          ),
+                        ],
                       ),
 
                       // Status

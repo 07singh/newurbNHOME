@@ -37,7 +37,13 @@ class CommissionListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Commission List"),
+        title: const Text(
+          "Commission List",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
         backgroundColor: Colors.deepPurple,
       ),
       body: ListView.builder(

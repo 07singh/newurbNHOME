@@ -28,7 +28,26 @@ class _StaffListScreenState extends State<StaffListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Staff List")),
+      appBar: AppBar(
+        title: const Text(
+          "Staff List",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.blue.shade700,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white), // ⬅️ Back arrow
+          onPressed: () {
+            // ✅ Safely go back if possible
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              // ✅ Optional fallback (agar directly open hua ho)
+              Navigator.pushReplacementNamed(context, '/home');
+            }
+          },
+        ),
+      ),
       body: FutureBuilder<StaffListResponse>(
         future: _futureStaff,
         builder: (context, snapshot) {
@@ -57,7 +76,8 @@ class _StaffListScreenState extends State<StaffListScreen> {
                     backgroundImage: staff.profilePic != null
                         ? NetworkImage(
                         "https://realapp.cheenu.in/uploads/${staff.profilePic}")
-                        : const AssetImage('assets/download (1).jpeg') as ImageProvider,
+                        : const AssetImage('assets/download (1).jpeg')
+                    as ImageProvider,
                   ),
                   title: Text(staff.fullname),
                   subtitle: Text("${staff.position} | ${staff.phone}"),

@@ -139,9 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _divider(),
                       _buildInfoRow('Staff ID', staff.staffId),
                       _divider(),
-                      _buildInfoRow('Joining Date', staff.joiningDate),
-                      _divider(),
-                      _buildInfoRow('Login Date', staff.loginDate ?? '-'),
+
                     ],
                   ),
                 ),

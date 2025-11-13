@@ -36,15 +36,9 @@ class _StaffListScreenState extends State<StaffListScreen> {
         backgroundColor: Colors.blue.shade700,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white), // ⬅️ Back arrow
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            // ✅ Safely go back if possible
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              // ✅ Optional fallback (agar directly open hua ho)
-              Navigator.pushReplacementNamed(context, '/home');
-            }
+            Navigator.pop(context);
           },
         ),
       ),

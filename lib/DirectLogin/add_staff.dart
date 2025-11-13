@@ -161,10 +161,15 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Add Staff", style: TextStyle(color: Colors.black)),
+        title: const Text("Add Staff", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue.shade700,
-        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

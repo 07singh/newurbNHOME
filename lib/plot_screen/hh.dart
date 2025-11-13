@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../service/auth_manager.dart';
 
 enum AreaUnit { sqYds, sqFt }
 enum BookingStatus { available, pending, booked, sellout }
@@ -254,9 +255,10 @@ extension StringExtension on String {
   }
 }
 
+
+
 class PlotScreen extends StatefulWidget {
   const PlotScreen({Key? key}) : super(key: key);
-
   @override
   State<PlotScreen> createState() => _PlotScreenState();
 }
@@ -319,7 +321,6 @@ class _PlotScreenState extends State<PlotScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       await Future.wait([
         _fetchPending(),
@@ -456,7 +457,6 @@ class _PlotScreenState extends State<PlotScreen> {
     final plot = plots[plotId]!;
     final isLarge = ['76', '79', '82', '85', '88', '91'].contains(plotId);
     final meas = _measurements[plotId];
-
     return GestureDetector(
       onTap: () => _showBookingDialog(plotId),
       child: Container(
@@ -847,6 +847,22 @@ class _PlotScreenState extends State<PlotScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     _buildRoad("22' WIDE ROAD"),
+                                    const SizedBox(height: 2),
+                                    // NEW ROW ADDED: Duplicate of 67–75
+                                    Row(
+                                      children: [
+                                        ...List.generate(
+                                          2,
+                                              (i) => _buildPlot('${67 - i}', width: plotWidth, height: plotHeight),
+                                        ),
+                                        ...List.generate(
+                                          7,
+                                              (i) => _buildPlot('${74 - i}', width: plotWidth, height: plotHeight),
+                                        ),
+                                        _buildPlot('75', width: plotWidth * 1.5, height: plotHeight),
+                                      ],
+                                    ),
+
                                     const SizedBox(height: 10),
                                     Container(
                                       width: 600,
@@ -1006,7 +1022,6 @@ class _PlotScreenState extends State<PlotScreen> {
       ),
     );
   }
-
   Widget _buildStatusItem(Color color, String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -1050,7 +1065,7 @@ class _BookingDialogState extends State<BookingDialog> {
   late TextEditingController _bookedAreaController;
   late TextEditingController _remainingAreaController;
   late TextEditingController _purchasePriceController; // ← was fare
-  late TextEditingController _receivingController;     // ← was paid
+  late TextEditingController _receivingController; // ← was paid
   late TextEditingController _projectController;
   late TextEditingController _pendingController;
   late TextEditingController _paidThroughController;
@@ -1071,44 +1086,86 @@ class _BookingDialogState extends State<BookingDialog> {
   double _totalAmount = 0;
 
   // Dropdown options
-  final List<String> _paidThroughOptions = ['Cash', 'Online Transfer', 'Cheque','NEFT','RTGS'];
+  final List<String> _paidThroughOptions = [
+    'Cash',
+    'Online Transfer',
+    'Cheque',
+    'NEFT',
+    'RTGS'
+  ];
   String _selectedPaidThrough = 'Online Transfer';
 
   @override
   void initState() {
     super.initState();
+    _initializeControllers();
+    _loadUserData();
+  }
 
+  void _initializeControllers() {
     final totalArea = widget.plot.totalAreaValue;
 
     _clientController = TextEditingController(text: widget.plot.clientName);
     _areaController = TextEditingController(text: totalArea.toStringAsFixed(0));
-    _bookedAreaController = TextEditingController(text: widget.plot.bookedArea.toStringAsFixed(0));
+    _bookedAreaController =
+        TextEditingController(text: widget.plot.bookedArea.toStringAsFixed(0));
     _remainingAreaController = TextEditingController(
       text: (totalArea - widget.plot.bookedArea).toStringAsFixed(0),
     );
-    _purchasePriceController = TextEditingController(text: widget.plot.fare.toStringAsFixed(0));
-    _receivingController = TextEditingController(text: widget.plot.paidAmount.toStringAsFixed(0));
+    _purchasePriceController =
+        TextEditingController(text: widget.plot.fare.toStringAsFixed(0));
+    _receivingController =
+        TextEditingController(text: widget.plot.paidAmount.toStringAsFixed(0));
     _projectController = TextEditingController(text: widget.plot.projectName);
-    _pendingController = TextEditingController(text: widget.plot.pendingAmount.toStringAsFixed(0));
-    _paidThroughController = TextEditingController(text: widget.plot.paidThrough);
-    _bookedByController = TextEditingController(text: widget.plot.bookedByDealer);
-    _customerPhoneController = TextEditingController(text: widget.plot.customerPhone);
-    _dealerPhoneController = TextEditingController(text: widget.plot.dealerPhone);
+    _pendingController = TextEditingController(
+        text: widget.plot.pendingAmount.toStringAsFixed(0));
+    _paidThroughController =
+        TextEditingController(text: widget.plot.paidThrough);
+    _bookedByController =
+        TextEditingController(text: widget.plot.bookedByDealer);
+    _customerPhoneController =
+        TextEditingController(text: widget.plot.customerPhone);
+    _dealerPhoneController =
+        TextEditingController(text: widget.plot.dealerPhone);
     _bookingDateController = TextEditingController(
       text: widget.plot.bookingDate.toIso8601String().split('T')[0],
     );
     _plotTypeController = TextEditingController(text: widget.plot.plotType);
     _status = widget.plot.status;
     _areaUnit = widget.plot.areaUnit;
-    _selectedPaidThrough = widget.plot.paidThrough.isNotEmpty ? widget.plot.paidThrough : 'Online Transfer';
+    _selectedPaidThrough = widget.plot.paidThrough.isNotEmpty
+        ? widget.plot.paidThrough
+        : 'Online Transfer';
 
     _updateTotalAmount();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final session = await AuthManager.getCurrentSession();
+      if (session != null) {
+        // Auto-populate dealer name and phone with current user's data
+        // Always populate with current user's info (user can still edit if needed)
+        if (session.userName != null && session.userName!.isNotEmpty) {
+          _bookedByController.text = session.userName!;
+        }
+        if (session.userMobile != null && session.userMobile!.isNotEmpty) {
+          _dealerPhoneController.text = session.userMobile!;
+        }
+        // Update UI if widget is still mounted
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   void _updateRemainingArea() {
     final total = double.tryParse(_areaController.text) ?? 0;
     final booked = double.tryParse(_bookedAreaController.text) ?? 0;
-    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1/9.0 : 1.0;
+    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
     final totalInYds = total * unitFactor;
     final remaining = totalInYds - booked;
 
@@ -1120,7 +1177,7 @@ class _BookingDialogState extends State<BookingDialog> {
   void _updateTotalAmount() {
     final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0;
     final bookedArea = double.tryParse(_bookedAreaController.text) ?? 0;
-    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1/9.0 : 1.0;
+    final unitFactor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
     final bookedInYds = bookedArea * unitFactor;
 
     setState(() {
@@ -1137,7 +1194,8 @@ class _BookingDialogState extends State<BookingDialog> {
       final fileSize = await File(image.path).length();
       if (fileSize > 5 * 1024 * 1024) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image size exceeds 5MB'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('Image size exceeds 5MB'),
+              backgroundColor: Colors.red),
         );
         return;
       }
@@ -1305,7 +1363,9 @@ class _BookingDialogState extends State<BookingDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery
+        .of(context)
+        .size;
     final dialogWidth = screenSize.width * 0.9;
     final dialogMaxHeight = screenSize.height * 0.85;
 
@@ -1329,7 +1389,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         children: [
                           Text(
                             'Plot ${widget.plot.id} - Booking',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
@@ -1341,7 +1402,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         const SizedBox(height: 8),
                         Text(
                           'Last Error: $_lastErrorMessage',
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
+                          style: const TextStyle(
+                              color: Colors.red, fontSize: 14),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -1369,7 +1431,10 @@ class _BookingDialogState extends State<BookingDialog> {
                         label: 'Customer Phone',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
-                        validator: (v) => v!.length != 10 ? '10 digits required' : null,
+                        validator: (v) =>
+                        v!.length != 10
+                            ? '10 digits required'
+                            : null,
                       ),
                       _buildTextField(
                         controller: _bookedByController,
@@ -1381,7 +1446,10 @@ class _BookingDialogState extends State<BookingDialog> {
                         label: 'Dealer Phone',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
-                        validator: (v) => v!.isEmpty || v.length != 10 ? '10 digits required' : null,
+                        validator: (v) =>
+                        v!.isEmpty || v.length != 10
+                            ? '10 digits required'
+                            : null,
                       ),
 
                       // Plot Area (Fixed – not editable)
@@ -1393,17 +1461,22 @@ class _BookingDialogState extends State<BookingDialog> {
                               label: 'Plot Area',
                               icon: Icons.square_foot,
                               readOnly: true,
-                              validator: (v) => (double.tryParse(v!) ?? 0) <= 0 ? 'Invalid' : null,
+                              validator: (v) =>
+                              (double.tryParse(v!) ?? 0) <= 0
+                                  ? 'Invalid'
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 8),
                           DropdownButton<AreaUnit>(
                             value: _areaUnit,
                             items: AreaUnit.values
-                                .map((u) => DropdownMenuItem(
-                              value: u,
-                              child: Text(u == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
-                            ))
+                                .map((u) =>
+                                DropdownMenuItem(
+                                  value: u,
+                                  child: Text(
+                                      u == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
+                                ))
                                 .toList(),
                             onChanged: (v) {
                               if (v != null) {
@@ -1433,15 +1506,20 @@ class _BookingDialogState extends State<BookingDialog> {
                               },
                               validator: (v) {
                                 final booked = double.tryParse(v!) ?? 0;
-                                final total = double.tryParse(_areaController.text) ?? 0;
-                                final factor = _areaUnit == AreaUnit.sqFt ? 1/9.0 : 1.0;
-                                if (booked > total * factor) return 'Exceeds total';
+                                final total = double.tryParse(
+                                    _areaController.text) ?? 0;
+                                final factor = _areaUnit == AreaUnit.sqFt ? 1 /
+                                    9.0 : 1.0;
+                                if (booked > total * factor)
+                                  return 'Exceeds total';
                                 return null;
                               },
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
+                          Text(_areaUnit == AreaUnit.sqYds
+                              ? 'Sq.Yds'
+                              : 'sq ft'),
                         ],
                       ),
 
@@ -1457,7 +1535,9 @@ class _BookingDialogState extends State<BookingDialog> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
+                          Text(_areaUnit == AreaUnit.sqYds
+                              ? 'Sq.Yds'
+                              : 'sq ft'),
                         ],
                       ),
 
@@ -1468,7 +1548,10 @@ class _BookingDialogState extends State<BookingDialog> {
                         icon: Icons.currency_rupee,
                         keyboardType: TextInputType.number,
                         onChanged: (_) => _updateTotalAmount(),
-                        validator: (v) => (double.tryParse(v!) ?? 0) <= 0 ? 'Required' : null,
+                        validator: (v) =>
+                        (double.tryParse(v!) ?? 0) <= 0
+                            ? 'Required'
+                            : null,
                       ),
 
                       // Total Amount (Auto)
@@ -1476,7 +1559,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
                           'Total Amount: ₹${_totalAmount.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 16,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
 
@@ -1489,7 +1573,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         onChanged: (v) {
                           final rec = double.tryParse(v) ?? 0;
                           setState(() {
-                            _pendingController.text = (_totalAmount - rec).toStringAsFixed(0);
+                            _pendingController.text =
+                                (_totalAmount - rec).toStringAsFixed(0);
                           });
                         },
                         validator: (v) {
@@ -1518,9 +1603,11 @@ class _BookingDialogState extends State<BookingDialog> {
                             prefixIcon: Icon(Icons.payment),
                           ),
                           items: _paidThroughOptions
-                              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                              .map((e) =>
+                              DropdownMenuItem(value: e, child: Text(e)))
                               .toList(),
-                          onChanged: (v) => setState(() => _selectedPaidThrough = v!),
+                          onChanged: (v) =>
+                              setState(() => _selectedPaidThrough = v!),
                           validator: (v) => v == null ? 'Required' : null,
                         ),
                       ),
@@ -1534,7 +1621,10 @@ class _BookingDialogState extends State<BookingDialog> {
                               label: 'Booking Date',
                               icon: Icons.calendar_today,
                               readOnly: true,
-                              validator: (v) => DateTime.tryParse(v ?? '') == null ? 'Invalid date' : null,
+                              validator: (v) =>
+                              DateTime.tryParse(v ?? '') == null
+                                  ? 'Invalid date'
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1543,7 +1633,8 @@ class _BookingDialogState extends State<BookingDialog> {
                             icon: const Icon(Icons.date_range),
                             label: const Text('Pick'),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 16),
                             ),
                           ),
                         ],
@@ -1555,14 +1646,16 @@ class _BookingDialogState extends State<BookingDialog> {
                           const Text('Status:'),
                           Checkbox(
                             value: _status,
-                            onChanged: (v) => setState(() => _status = v ?? false),
+                            onChanged: (v) =>
+                                setState(() => _status = v ?? false),
                           ),
                           const Text('Active'),
                         ],
                       ),
 
                       const SizedBox(height: 16),
-                      const Text('Upload Photo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('Upload Photo', style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -1588,7 +1681,9 @@ class _BookingDialogState extends State<BookingDialog> {
                           padding: const EdgeInsets.only(top: 12),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(_uploadedPhoto!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                            child: Image.file(_uploadedPhoto!, height: 150,
+                                width: double.infinity,
+                                fit: BoxFit.cover),
                           ),
                         ),
 
@@ -1600,28 +1695,41 @@ class _BookingDialogState extends State<BookingDialog> {
                             if (_formKey.currentState!.validate()) {
                               final localPlot = PlotInfo.clone(widget.plot);
 
-                              final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0;
-                              final bookedArea = double.tryParse(_bookedAreaController.text) ?? 0;
-                              final totalAmountValue = purchasePrice * (bookedArea / (_areaUnit == AreaUnit.sqFt ? 9.0 : 1.0));
-
+                              final purchasePrice = double.tryParse(
+                                  _purchasePriceController.text) ?? 0;
+                              final bookedArea = double.tryParse(
+                                  _bookedAreaController.text) ?? 0;
+                              final totalAmountValue = purchasePrice *
+                                  (bookedArea /
+                                      (_areaUnit == AreaUnit.sqFt ? 9.0 : 1.0));
 
 
 // सही तरीके से फील्ड्स अपडेट करें
                               localPlot.clientName = _clientController.text;
                               localPlot.fare = purchasePrice;
                               localPlot.totalAmount = totalAmountValue;
-                              localPlot.receivingAmount = double.tryParse(_receivingController.text) ?? 0; // paidAmount हटाया
+                              localPlot.receivingAmount =
+                                  double.tryParse(_receivingController.text) ??
+                                      0; // paidAmount हटाया
                               localPlot.bookedArea = bookedArea;
-                              localPlot.area = '${_areaController.text} ${_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'}';
+                              localPlot.area =
+                              '${_areaController.text} ${_areaUnit ==
+                                  AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'}';
                               localPlot.areaUnit = _areaUnit;
                               localPlot.photoPath = _uploadedPhoto?.path;
                               localPlot.projectName = _projectController.text;
-                              localPlot.pendingAmount = totalAmountValue - localPlot.receivingAmount; // receivingAmount से
+                              localPlot.pendingAmount = totalAmountValue -
+                                  localPlot
+                                      .receivingAmount; // receivingAmount से
                               localPlot.paidThrough = _selectedPaidThrough;
-                              localPlot.bookedByDealer = _bookedByController.text;
-                              localPlot.customerPhone = _customerPhoneController.text;
-                              localPlot.dealerPhone = _dealerPhoneController.text;
-                              localPlot.bookingDate = DateTime.parse(_bookingDateController.text);
+                              localPlot.bookedByDealer =
+                                  _bookedByController.text;
+                              localPlot.customerPhone =
+                                  _customerPhoneController.text;
+                              localPlot.dealerPhone =
+                                  _dealerPhoneController.text;
+                              localPlot.bookingDate =
+                                  DateTime.parse(_bookingDateController.text);
                               localPlot.plotType = _plotTypeController.text;
                               localPlot.status = _status;
 
@@ -1641,8 +1749,10 @@ class _BookingDialogState extends State<BookingDialog> {
                             }
                           },
                           child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text('Submit Booking', style: TextStyle(fontSize: 16)),
+                              ? const CircularProgressIndicator(
+                              color: Colors.white)
+                              : const Text(
+                              'Submit Booking', style: TextStyle(fontSize: 16)),
                         ),
                       ),
                     ],

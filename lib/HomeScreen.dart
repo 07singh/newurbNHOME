@@ -5,6 +5,7 @@ import '/emoloyee_file/profile_screenforemployee.dart';
 import 'DirectLogin/add_visitorem.dart' show AddVisitorScreenem;
 import 'EmployeeDashboard/attendanceHistory.dart';
 import 'EmployeeDashboard/attendance_router.dart';
+import 'EmployeeDashboard/staff_attendance_screen.dart';
 import 'today_flowup_page.dart';
 import 'week_flowup_page.dart';
 import 'total_flowup_page.dart';
@@ -124,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: EdgeInsets.zero,
           children: [
             Container(
-              height: 150, // Reduced height to prevent overflow
+              height: 165, // Reduced height to prevent overflow
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Colors.deepPurple.shade400, Colors.deepPurple.shade600],
@@ -156,21 +157,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                           : const Icon(Icons.person, size: 28, color: Colors.white),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
                       'Hello, ${_userName ?? "User"}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15, // Slightly smaller font
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _userRole ?? 'Employee',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 13, // Slightly smaller font
                       ),
                     ),
                   ],
@@ -199,10 +192,22 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.fact_check, color: Colors.green),
               title: const Text('Attendance Record', style: TextStyle(fontWeight: FontWeight.w500)),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AttendanceScreent()),
-                );
+                Navigator.pop(context);
+                if (_userPhone != null && _userPhone!.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StaffAttendanceScreen(phone: _userPhone!),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Phone number not available'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
             ),
             ListTile(

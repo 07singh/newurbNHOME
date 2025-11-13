@@ -749,17 +749,27 @@ class _DirectloginPageState extends State<DirectloginPage>
             children: [
               if (userRole == "Director" || userRole == "Admin") ...[
                 _buildActionButton(
-                  "Add Employee",
+                  "Add Staff",
                   Icons.person_add_alt_1_rounded,
                   Color(0xFFFFD700),
-                  onTap: () => _navigateTo(const AddStaffScreen()),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddStaffScreen()),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 _buildActionButton(
                   "Associate List",
                   Icons.list_alt_rounded,
                   Colors.purple,
-                  onTap: () => _navigateTo(const AssociateListScreen()),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AssociateListScreen()),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
               ],
@@ -774,7 +784,12 @@ class _DirectloginPageState extends State<DirectloginPage>
                   "Add staff list",
                   Icons.calendar_today_rounded,
                   Colors.purple,
-                  onTap: () => _navigateTo(const StaffListScreen()),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const StaffListScreen()),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 _buildActionButton(

@@ -16,6 +16,7 @@ import '/service/associate_profile_service.dart';
 import '/Model/associate_profile_model.dart';
 import'/screens/payment.dart';
 import '/Employ.dart';
+import 'asscoiate_plot_scren/associateDrawerHistory.dart';
 
 
 // Fixed duplicate import
@@ -333,7 +334,6 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             
             _buildWelcomeHeader(),
             const SizedBox(height: 20),
-            _buildPerformanceStats(),
             const SizedBox(height: 20),
             _buildDashboardGrid(),
             const SizedBox(height: 20),
@@ -341,11 +341,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TotalBookingListScreen())),
-        backgroundColor: Colors.deepPurple,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+
     );
   }
 
@@ -421,37 +417,6 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  Widget _buildPerformanceStats() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Performance Metrics", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple)),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.8),
-          itemCount: _performanceStats.length,
-          itemBuilder: (context, index) {
-            final stat = _performanceStats[index];
-            return Container(
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(value: stat['progress'] as double, backgroundColor: Colors.grey.shade200, color: stat['color'] as Color, strokeWidth: 6),
-                  const SizedBox(height: 12),
-                  Text(stat['value'] as String, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: stat['color'] as Color)),
-                  const SizedBox(height: 4),
-                  Text(stat['label'] as String, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                ],
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
 
   Widget _buildDashboardGrid() {
     return Column(
@@ -628,6 +593,8 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                   _buildDrawerSection("MAIN", [
                     _buildDrawerItem("Dashboard", Icons.dashboard, Colors.deepPurple),
                     _buildDrawerItem("My Leads", Icons.leaderboard, Colors.blue),
+
+
                     _buildDrawerItem("My Booking", Icons.book_online, Colors.green),
                   ]),
                   _buildDrawerSection("FINANCE", [

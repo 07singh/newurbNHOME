@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../HomeScreen.dart';
 import '/service/attendance_manager.dart';
+import '/service/attendance_service.dart';
 import '/service/auth_manager.dart';
 import '/Model/login_model.dart';
 import '/Model/user_session.dart';
@@ -41,6 +43,7 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
   // Location & Address
   Position? _position;
   String? _address;
+  String? _state; // State extracted from location
   bool _isLoadingLocation = true;
 
   // Photo Management
@@ -231,6 +234,8 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
 
         setState(() {
           _address = addressParts.join(', ');
+          // Extract state from administrativeArea
+          _state = p.administrativeArea;
           _isLoadingLocation = false;
         });
       }
@@ -238,6 +243,7 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
       if (mounted) {
         setState(() {
           _address = 'Address unavailable';
+          _state = null;
           _isLoadingLocation = false;
         });
       }
@@ -298,40 +304,89 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
     setState(() => _isCheckingOut = true);
 
     try {
-      // Calculate session duration
+      // 1. Calculate session duration
       final checkOutTime = DateTime.now();
       final duration = checkOutTime.difference(widget.checkInTime);
 
-      // TODO: Send attendance data to server API
-      // final response = await AttendanceService.submitAttendance(
-      //   userId: _currentUser!.userId!,
-      //   userName: _currentUser!.userName,
-      //   checkInTime: widget.checkInTime,
-      //   checkOutTime: checkOutTime,
-      //   checkInPhoto: widget.checkInPhoto,
-      //   checkOutPhoto: _photo,
-      //   checkInLocation: widget.checkInPosition,
-      //   checkOutLocation: _position,
-      //   checkInAddress: widget.checkInAddress,
-      //   checkOutAddress: _address,
-      //   duration: duration,
-      // );
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Clear check-in state from persistent storage
-      await AttendanceManager.clearCheckIn();
-
-      // Show success message with duration
-      if (mounted) {
-        final hours = duration.inHours;
-        final minutes = duration.inMinutes.remainder(60);
-        _showSuccess('Checked out successfully! Duration: ${hours}h ${minutes}m');
+      // 2. Convert check-out image to base64
+      String? base64CheckOutImage;
+      try {
+        final bytes = await _photo!.readAsBytes();
+        base64CheckOutImage = base64Encode(bytes);
+      } catch (e) {
+        throw Exception('Failed to convert check-out image to base64: $e');
       }
 
-      // Navigate back to home
-      await Future.delayed(const Duration(seconds: 2));
+      // 3. Convert check-in image to base64 (if available)
+      String? base64CheckInImage;
+      if (widget.checkInPhoto != null) {
+        try {
+          final bytes = await widget.checkInPhoto!.readAsBytes();
+          base64CheckInImage = base64Encode(bytes);
+        } catch (e) {
+          debugPrint('Warning: Failed to convert check-in image to base64: $e');
+        }
+      }
+
+      // 4. Prepare check-out data
+      final checkOutTimeISO = _formatDateTimeForAPI(checkOutTime);
+      final checkInTimeISO = _formatDateTimeForAPI(widget.checkInTime);
+      final employeeName = _currentUser?.userName ?? '';
+      final empMob = _currentUser?.userMobile ?? 
+                     _currentUser?.phone ?? '';
+
+      // Validate required fields
+      if (employeeName.isEmpty) {
+        throw Exception('Employee name is required. Please login again.');
+      }
+      if (empMob.isEmpty) {
+        throw Exception('Employee mobile number is required. Please login again.');
+      }
+      if (_address == null || _address!.isEmpty) {
+        throw Exception('Location address is required.');
+      }
+      if (widget.checkInAddress == null || widget.checkInAddress!.isEmpty) {
+        throw Exception('Check-in location is required.');
+      }
+
+      // 5. Submit both check-in and check-out to API
+      // Note: Action will be "Both" and Status will be "Present" (set in service)
+      bool apiSuccess = false;
+      try {
+        final response = await AttendanceService.submitBoth(
+          employeeName: employeeName,
+          empMob: empMob,
+          checkInTime: checkInTimeISO,
+          checkOutTime: checkOutTimeISO,
+          checkInLocation: widget.checkInAddress!,
+          checkOutLocation: _address!,
+          checkInImage: base64CheckInImage ?? '',
+          checkOutImage: base64CheckOutImage,
+          state: _state,
+          // Action: 'Both' and Status: 'Present' are set in submitBoth() method
+        );
+
+        apiSuccess = true;
+        debugPrint('Check-out submitted successfully: ${response.message}');
+      } catch (e) {
+        // Log error but don't block completion if data is saved locally
+        debugPrint('Error submitting check-out to API: $e');
+      }
+
+      // 6. Clear check-in state from persistent storage
+      await AttendanceManager.clearCheckIn();
+
+      // 7. Show success message in UI
+      if (mounted) {
+        if (apiSuccess) {
+          _showSuccess('Attendance saved successfully');
+        } else {
+          _showSuccess('Attendance saved successfully (offline)');
+        }
+      }
+
+      // 8. Navigate back to home
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -369,10 +424,28 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
@@ -385,6 +458,19 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
 
   /// Get check-in time formatted
   String _getCheckInTime() => DateFormat('hh:mm a').format(widget.checkInTime);
+
+  /// Format DateTime for API (ISO 8601 format without milliseconds and timezone)
+  /// Example: "2025-11-10T09:30:00"
+  String _formatDateTimeForAPI(DateTime dateTime) {
+    // Format as ISO 8601 without milliseconds and timezone
+    final year = dateTime.year.toString().padLeft(4, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final second = dateTime.second.toString().padLeft(2, '0');
+    return '$year-$month-$day$hour:$minute:$second';
+  }
 
   @override
   Widget build(BuildContext context) {

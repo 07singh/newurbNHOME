@@ -1,43 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '/Model/modelofindividual.dart';
+import '/service/service_of_indiviadual.dart';
+import '/service/auth_manager.dart';
 
 class MyBookingScreen extends StatefulWidget {
-  const MyBookingScreen({super.key});
+  final dynamic phone;
+  const MyBookingScreen({super.key, this.phone}); // dynamic + optional
 
   @override
   State<MyBookingScreen> createState() => _MyBookingScreenState();
 }
 
 class _MyBookingScreenState extends State<MyBookingScreen> {
-  final List<Map<String, dynamic>> _bookings = [
-    {
-      "plotNo": "A-101",
-      "clientName": "Rohit Sharma",
-      "projectName": "Green Valley",
-      "bookedArea": "1200 sq.ft",
-      "receivedPayment": 250000,
-      "clientPhone": "9876543210"
-    },
-    {
-      "plotNo": "B-204",
-      "clientName": "Priya Mehta",
-      "projectName": "Sunshine City",
-      "bookedArea": "950 sq.ft",
-      "receivedPayment": 175000,
-      "clientPhone": "9123456789"
-    },
-    {
-      "plotNo": "C-305",
-      "clientName": "Ankit Verma",
-      "projectName": "Dream Heights",
-      "bookedArea": "1400 sq.ft",
-      "receivedPayment": 300000,
-      "clientPhone": "9004561234"
-    },
-  ];
+  late Future<List<Booking>> _futureBookings;
+  final BookingService _service = BookingService();
+  String? _loggedInPhone;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBookings();
+  }
+
+  /// Load bookings for the logged-in user from session
+  Future<void> _loadBookings() async {
+    String? phone;
+    
+    // First, try to get phone from widget parameter
+    final widgetPhone = (widget.phone ?? "").toString().trim();
+    if (widgetPhone.isNotEmpty) {
+      phone = widgetPhone;
+    } else {
+      // If no phone provided, get from session (logged-in user)
+      final session = await AuthManager.getCurrentSession();
+      phone = session?.userMobile ?? session?.phone;
+    }
+    
+    setState(() {
+      _loggedInPhone = phone;
+    });
+
+    if (phone != null && phone.isNotEmpty) {
+      _futureBookings = _service.fetchBookingsForPhone(phone);
+    } else {
+      _futureBookings = Future.value([]);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final String loggedPhone = _loggedInPhone ?? (widget.phone ?? "").toString().trim();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
@@ -50,19 +64,111 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                _loadBookings();
+              });
+            },
+            tooltip: 'Refresh Bookings',
+          ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _bookings.length,
-        itemBuilder: (context, index) {
-          final booking = _bookings[index];
-          return _buildBookingCard(booking);
+      body: FutureBuilder<List<Booking>>(
+        future: _futureBookings,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Error: ${snapshot.error}",
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("Retry"),
+                    onPressed: () {
+                      setState(() {
+                        _loadBookings();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final allBookings = snapshot.data ?? [];
+
+          // ✅ Filter: show only bookings by logged-in dealer
+          final myBookings = allBookings.where((b) {
+            if (loggedPhone.isEmpty) return false;
+            final dealer = b.dealerPhnNumber.replaceAll(RegExp(r'\s+|\+91'), '');
+            final logged = loggedPhone.replaceAll(RegExp(r'\s+|\+91'), '');
+            return dealer == logged;
+          }).toList();
+
+
+          if (myBookings.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.book_online_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    loggedPhone.isEmpty
+                        ? "Unable to load bookings.\nPlease login again."
+                        : "No bookings found for your account",
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (loggedPhone.isEmpty) ...[
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Retry"),
+                      onPressed: () {
+                        setState(() {
+                          _loadBookings();
+                        });
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: myBookings.length,
+            itemBuilder: (context, index) {
+              return _buildBookingCard(myBookings[index]);
+            },
+          );
         },
       ),
     );
   }
 
-  Widget _buildBookingCard(Map<String, dynamic> booking) {
+  Widget _buildBookingCard(Booking booking) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
@@ -85,7 +191,7 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
               const Icon(Icons.home_work, color: Colors.black54),
               const SizedBox(width: 8),
               Text(
-                "Plot No: ${booking['plotNo']}",
+                "Plot No: ${booking.plotNumber}",
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -94,11 +200,13 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
             ],
           ),
           const Divider(height: 20),
-          _infoRow("Client Name", booking['clientName']),
-          _infoRow("Project Name", booking['projectName']),
-          _infoRow("Booked Area", booking['bookedArea']),
-          _infoRow("Received Payment", "₹${booking['receivedPayment']}"),
-
+          _infoRow("Client Name", booking.customerName),
+          _infoRow("Project Name", booking.projectName),
+          _infoRow("Booked Area", "${booking.bookingArea ?? '-'} sq.ft"),
+          _infoRow("Received Payment", "₹${booking.receivingAmount}"),
+          _infoRow("Pending Amount", "₹${booking.pendingAmount}"),
+          _infoRow("Status", booking.bookingStatus),
+          _infoRow("Paid Through", booking.paidThrough),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -135,7 +243,7 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onPressed: () => _callNow(booking['clientPhone']),
+                onPressed: () => _callNow(booking.customerPhnNumber),
               ),
             ],
           ),
@@ -179,7 +287,7 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
     }
   }
 
-  void _addPayment(BuildContext context, Map<String, dynamic> booking) {
+  void _addPayment(BuildContext context, Booking booking) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -228,7 +336,7 @@ class _MyBookingScreenState extends State<MyBookingScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                          "₹${_amountController.text} added for ${booking['clientName']}"),
+                          "₹${_amountController.text} added for ${booking.customerName}"),
                     ),
                   );
                 },

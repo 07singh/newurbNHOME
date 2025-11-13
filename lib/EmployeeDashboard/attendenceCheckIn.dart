@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import 'attendenceCheckOut.dart';
 import '/service/attendance_manager.dart';
+import '/service/attendance_service.dart';
 import '/service/auth_manager.dart';
 import '/Model/login_model.dart';
 import '/Model/user_session.dart';
@@ -23,6 +25,7 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
   // Location & Address
   Position? _position;
   String? _address;
+  String? _state; // State extracted from location
   bool _isLoadingLocation = true;
 
   // Photo
@@ -173,6 +176,8 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
 
         setState(() {
           _address = addressParts.join(', ');
+          // Extract state from administrativeArea
+          _state = p.administrativeArea;
           _isLoadingLocation = false;
         });
       }
@@ -180,6 +185,7 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
       if (mounted) {
         setState(() {
           _address = 'Address unavailable';
+          _state = null;
           _isLoadingLocation = false;
         });
       }
@@ -229,8 +235,35 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
         }
       }
 
-      // 3. Save check-in data to persistent storage
+      // 3. Convert image to base64
+      String? base64Image;
+      try {
+        final bytes = await photoFile.readAsBytes();
+        base64Image = base64Encode(bytes);
+      } catch (e) {
+        throw Exception('Failed to convert image to base64: $e');
+      }
+
+      // 4. Prepare check-in data
       final checkInTime = DateTime.now();
+      // Format date as ISO 8601 without milliseconds and timezone (e.g., "2025-11-10T09:30:00")
+      final checkInTimeISO = _formatDateTimeForAPI(checkInTime);
+      final employeeName = _currentUser?.userName ?? '';
+      final empMob = _currentUser?.userMobile ?? 
+                     _currentUser?.phone ?? '';
+
+      // Validate required fields
+      if (employeeName.isEmpty) {
+        throw Exception('Employee name is required. Please login again.');
+      }
+      if (empMob.isEmpty) {
+        throw Exception('Employee mobile number is required. Please login again.');
+      }
+      if (_address == null || _address!.isEmpty) {
+        throw Exception('Location address is required.');
+      }
+
+      // 5. Save check-in data to persistent storage
       final saved = await AttendanceManager.saveCheckIn(
         checkInTime: checkInTime,
         checkInPhoto: photoFile,
@@ -239,16 +272,40 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
       );
 
       if (!saved) {
-        throw Exception('Failed to save check-in data locally.');
+        debugPrint('Warning: Failed to save check-in data locally, but continuing...');
       }
 
-      // 4. Show success feedback
+      // 6. Submit check-in to API
+      bool apiSuccess = false;
+      try {
+        final response = await AttendanceService.submitCheckIn(
+          employeeName: employeeName,
+          empMob: empMob,
+          checkInTime: checkInTimeISO,
+          checkInLocation: _address!,
+          checkInImage: base64Image,
+          state: _state,
+          action: 'CheckIn',
+        );
+
+        apiSuccess = true;
+        debugPrint('Check-in submitted successfully: ${response.message}');
+      } catch (e) {
+        // Log error but don't block navigation if local save succeeded
+        debugPrint('Error submitting check-in to API: $e');
+      }
+
+      // 7. Show success feedback in UI
       if (mounted) {
-        _showSuccess('Check-in captured successfully!');
+        if (apiSuccess) {
+          _showSuccess('Attendance saved successfully');
+        } else {
+          _showSuccess('Attendance saved successfully (offline)');
+        }
       }
 
-      // 5. Navigate to checkout page with data
-      await Future.delayed(const Duration(milliseconds: 800));
+      // 8. Navigate to checkout page with data
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -292,10 +349,28 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
@@ -305,6 +380,19 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
 
   /// Format current date
   String _formattedDate() => DateFormat('EEE, MMM d, yyyy').format(DateTime.now());
+
+  /// Format DateTime for API (ISO 8601 format without milliseconds and timezone)
+  /// Example: "2025-11-10T09:30:00"
+  String _formatDateTimeForAPI(DateTime dateTime) {
+    // Format as ISO 8601 without milliseconds and timezone
+    final year = dateTime.year.toString().padLeft(4, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final second = dateTime.second.toString().padLeft(2, '0');
+    return '$year-$month-$day$hour:$minute:$second';
+  }
 
   @override
   Widget build(BuildContext context) {

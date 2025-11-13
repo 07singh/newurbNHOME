@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../service/auth_manager.dart';
 
 enum AreaUnit { sqYds, sqFt }
 enum BookingStatus { available, pending, booked, sellout }
@@ -297,7 +298,11 @@ class _BookingDialogState extends State<BookingDialog> {
   @override
   void initState() {
     super.initState();
+    _initializeControllers();
+    _loadUserData();
+  }
 
+  void _initializeControllers() {
     final totalArea = widget.plot.totalAreaValue;
 
     _clientController = TextEditingController(text: widget.plot.clientName);
@@ -323,6 +328,28 @@ class _BookingDialogState extends State<BookingDialog> {
     _selectedPaidThrough = widget.plot.paidThrough.isNotEmpty ? widget.plot.paidThrough : 'Online Transfer';
 
     _updateTotalAmount();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final session = await AuthManager.getCurrentSession();
+      if (session != null) {
+        // Auto-populate dealer name and phone with current user's data
+        // Always populate with current user's info (user can still edit if needed)
+        if (session.userName != null && session.userName!.isNotEmpty) {
+          _bookedByController.text = session.userName!;
+        }
+        if (session.userMobile != null && session.userMobile!.isNotEmpty) {
+          _dealerPhoneController.text = session.userMobile!;
+        }
+        // Update UI if widget is still mounted
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   // FIXED: Sync area string when unit changes

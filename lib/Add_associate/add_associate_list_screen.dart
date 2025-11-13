@@ -27,24 +27,26 @@ class _AssociateListScreenState extends State<AssociateListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Associates'),
+        backgroundColor: Colors.yellow, // ✅ Yellow background
+        title: const Text(
+          'Associates',
+          style: TextStyle(
+            color: Colors.black, // ✅ Black text color
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.black, // ✅ Black back icon
+          ),
           onPressed: () {
-            // ✅ This ensures we go back safely
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              // ✅ If no previous screen, go to DirectloginPage
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const DirectloginPage()),
-              );
-            }
+            Navigator.pop(context); // ✅ Only pop, no pushReplacement
           },
         ),
       ),
+
       body: FutureBuilder<List<Associate>>(
         future: _futureAssociates,
         builder: (context, snapshot) {

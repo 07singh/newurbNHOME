@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../EmployeeDashboard/historyforHr.dart';
+import '../emoloyee_file/profile_screenforhr.dart';
 import '/emoloyee_file/profile_screen.dart';
 import '/emoloyee_file/booking_request.dart';
 import '/HRdashboad/Add_employee.dart';
@@ -15,6 +16,7 @@ import'/DirectLogin/add_staff.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/Employ.dart';
+import 'LeavePage.dart';
 
 
 
@@ -55,7 +57,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   Future<void> _navigateToProfile() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) =>   ProfileScreen()),
+      MaterialPageRoute(builder: (context) =>   ProfileScreenhr ()),
     );
     if (result != null && result is Map<String, String>) {
       setState(() {});
@@ -350,7 +352,23 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           childAspectRatio: 1.2,
           children: [
             _buildStatCard(title: "Total Employees", value: "247", icon: Icons.people_alt_rounded, color: Colors.blue, change: "+12 this month"),
-            _buildStatCard(title: "On Leave Today", value: "8", icon: Icons.beach_access_rounded, color: Colors.orange, change: "2 planned, 6 unplanned"),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LeavePage()),
+                );
+              },
+              child: _buildStatCard(
+                title: "On Leave Today",
+                value: "8",
+                icon: Icons.beach_access_rounded,
+                color: Colors.orange,
+                change: "2 planned, 6 unplanned",
+              ),
+            ),
+
+
           ],
         ),
       ],
@@ -546,19 +564,19 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     await AuthManager.clearSession();
     // Clear attendance state
     await AttendanceManager.clearCheckIn();
-    
+
     // Clear secure storage
     await storage.deleteAll();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: const Text("Logged out successfully"), backgroundColor: Colors.green.shade600, duration: const Duration(seconds: 2)),
     );
-    
+
     // Navigate to Employ.dart (main role selection screen)
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const HomePage()),
-      (route) => false,
+          (route) => false,
     );
   }
 }

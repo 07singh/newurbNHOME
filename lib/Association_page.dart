@@ -13,7 +13,9 @@ import '/screens/MyBookingScreen.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/service/associate_profile_service.dart';
+import '/service/service_of_indiviadual.dart';
 import '/Model/associate_profile_model.dart';
+import '/Model/modelofindividual.dart';
 import'/screens/payment.dart';
 import '/Employ.dart';
 import 'asscoiate_plot_scren/associateDrawerHistory.dart';
@@ -57,9 +59,10 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
   
   // Services
   final AssociateProfileService _profileService = AssociateProfileService();
+  final BookingService _bookingService = BookingService();
 
   final Map<String, dynamic> _dashboardData = {
-    'myBooking': {'count': 12, 'growth': 8.2},
+    'myBooking': {'count': 0, 'growth': 8.2},
     'bookPlot': {'count': 5, 'growth': 15.7},
     'totalCommission': {'count': 28500, 'growth': 12.4},
     'commissionReceived': {'count': 18200, 'growth': 5.3},
@@ -67,7 +70,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     'totalVisits': {'count': 47, 'growth': -2.1},
   };
 
-  final List<Map<String, dynamic>> _recentActivities = [
+  final List<Map<String, dynamic>> _notifications = [
     {'type': 'Booking', 'description': 'Plot #A-102 booked', 'time': '2 hours ago', 'icon': Icons.book_online, 'color': Colors.green},
     {'type': 'Visit', 'description': 'Site visit completed', 'time': '5 hours ago', 'icon': Icons.location_on, 'color': Colors.blue},
     {'type': 'Commission', 'description': '₹5,000 received', 'time': '1 day ago', 'icon': Icons.attach_money, 'color': Colors.orange},
@@ -91,6 +94,8 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     
     // Fetch real profile data from API
     _loadProfileData();
+    // Fetch booking count
+    _loadBookingCount();
   }
   
   /// Fetches profile data from API and updates UI + Session
@@ -214,32 +219,55 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     });
     await _loadProfileData();
   }
+  
+  /// Fetch booking count from API and update dashboard
+  Future<void> _loadBookingCount() async {
+    try {
+      // Get phone number
+      String? phone = _userPhone ?? widget.phone;
+      if (phone == null || phone.isEmpty) {
+        final session = await AuthManager.getCurrentSession();
+        phone = session?.userMobile ?? session?.phone;
+      }
+      
+      if (phone == null || phone.isEmpty) {
+        print('⚠️ Phone number not available for booking count');
+        return;
+      }
+      
+      // Fetch bookings
+      final bookings = await _bookingService.fetchBookingsForPhone(phone);
+      
+      // Update dashboard data with actual count
+      if (mounted) {
+        setState(() {
+          _dashboardData['myBooking']['count'] = bookings.length;
+        });
+        print('✅ Booking count updated: ${bookings.length}');
+      }
+    } catch (e) {
+      print('❌ Error loading booking count: $e');
+      // Keep default count (0) on error
+    }
+  }
 
   List<DashboardItem> get items => [
     DashboardItem(
-      title: "My Booking",
+      title: "My Total Booking",
       icon: Icons.book_online,
       color: Colors.deepPurple,
       count: _dashboardData['myBooking']['count'],
       growth: (_dashboardData['myBooking']['growth'] as num).toDouble(),
     ),
     DashboardItem(
-      title: "Book Plot",
+      title: "Book New Plot",
       icon: Icons.home_work,
       color: Colors.teal,
       count: _dashboardData['bookPlot']['count'],
       growth: (_dashboardData['bookPlot']['growth'] as num).toDouble(),
     ),
     DashboardItem(
-      title: "PaymentRecived",
-      icon: Icons.attach_money,
-      color: Colors.orange,
-      count: _dashboardData['totalCommission']['count'],
-      growth: (_dashboardData['totalCommission']['growth'] as num).toDouble(),
-      isCurrency: true,
-    ),
-    DashboardItem(
-      title: "Commission Received",
+      title: "Total Income",
       icon: Icons.payments,
       color: Colors.green,
       count: _dashboardData['commissionReceived']['count'],
@@ -247,14 +275,23 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       isCurrency: true,
     ),
     DashboardItem(
-      title: "",
-      icon: Icons.add_location_alt,
+      title: "Income History",
+      icon: Icons.attach_money,
+      color: Colors.orange,
+      count: _dashboardData['totalCommission']['count'],
+      growth: (_dashboardData['totalCommission']['growth'] as num).toDouble(),
+      isCurrency: true,
+    ),
+
+    DashboardItem(
+      title: "Add client Visit",
+      icon: Icons.person_add,
       color: Colors.blue,
       count: _dashboardData['addVisit']['count'],
       growth: (_dashboardData['addVisit']['growth'] as num).toDouble(),
     ),
     DashboardItem(
-      title: "Total Visits",
+      title: "Our Total lists",
       icon: Icons.location_city,
       color: Colors.red,
       count: _dashboardData['totalVisits']['count'],
@@ -313,6 +350,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             onPressed: () {
               _refreshData();
               _refreshProfile();
+              _loadBookingCount();
             }, 
             tooltip: 'Refresh Data'
           ),
@@ -337,7 +375,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             const SizedBox(height: 20),
             _buildDashboardGrid(),
             const SizedBox(height: 20),
-            _buildRecentActivities(),
+             _buildNotifications()
           ],
         ),
       ),
@@ -434,22 +472,22 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             return DashboardCard(
               item: item,
               onTap: () {
-                if (item.title == "My Booking") {
+                if (item.title == "My Total Booking") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookingScreen ()));
-                } else if (item.title == "Book Plot") {
+                } else if (item.title == "Book New Plot") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()));
-                } else if (item.title == "PaymentRecived") {
+                } else if (item.title == "Total Income") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const TotalBookingListScreen()));
+                } else if (item.title == "Income History") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const  PaymentReceivedScreen()));
-                } else if (item.title == "TotalBookingListScreen") {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const  TotalBookingListScreen()));
-                } else if (item.title == "Commission Received") {
+                } else if (item.title == "add Client Visit") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => CommissionListScreen(), // Correct
                     ),
                   );
-                } else if (item.title == "Commission Received") {
+                } else if (item.title == "Our Total lists") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -472,25 +510,55 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     );
   }
 
-  Widget _buildRecentActivities() {
+  Widget _buildNotifications() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Recent Activities", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.deepPurple)),
+        const Text(
+          "Notifications",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.deepPurple,
+          ),
+        ),
         const SizedBox(height: 12),
         Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))]),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              )
+            ],
+          ),
           child: Column(
-            children: _recentActivities.map((activity) {
+            children: _notifications.map((item) {
               return ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: (activity['color'] as Color).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(activity['icon'] as IconData, color: activity['color'] as Color, size: 20),
+                  decoration: BoxDecoration(
+                    color: (item['color'] as Color).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    item['icon'] as IconData,
+                    color: item['color'] as Color,
+                    size: 20,
+                  ),
                 ),
-                title: Text(activity['type'] as String, style: const TextStyle(fontWeight: FontWeight.w500)),
-                subtitle: Text(activity['description'] as String),
-                trailing: Text(activity['time'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                title: Text(
+                  item['type'] as String,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(item['description'] as String),
+                trailing: Text(
+                  item['time'] as String,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
               );
             }).toList(),
           ),
@@ -598,13 +666,13 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                     _buildDrawerItem("My Booking", Icons.book_online, Colors.green),
                   ]),
                   _buildDrawerSection("FINANCE", [
-                    _buildDrawerItem("Total Commission", Icons.attach_money, Colors.orange),
-                    _buildDrawerItem("Commission Received", Icons.payments, Colors.teal),
+                    _buildDrawerItem("Income History", Icons.attach_money, Colors.orange),
+                    _buildDrawerItem("Total income", Icons.payments, Colors.teal),
                   ]),
                   _buildDrawerSection("OPERATIONS", [
-                    _buildDrawerItem("Book Plot", Icons.home_work, Colors.indigo),
-                    _buildDrawerItem("Total Visit", Icons.location_city, Colors.red),
-                    _buildDrawerItem("Add Visit", Icons.add_location_alt, Colors.pink),
+                    _buildDrawerItem("Book New Plot", Icons.home_work, Colors.indigo),
+                    _buildDrawerItem("Our Visit list", Icons.location_city, Colors.red),
+                    _buildDrawerItem("Add Client Visit ", Icons.add_location_alt, Colors.pink),
                   ]),
                   _buildDrawerSection("SETTINGS", [
                     _buildDrawerItem("Settings", Icons.settings, Colors.grey),

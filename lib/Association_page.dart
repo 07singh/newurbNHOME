@@ -18,6 +18,8 @@ import '/Model/associate_profile_model.dart';
 import '/Model/modelofindividual.dart';
 import'/screens/payment.dart';
 import '/Employ.dart';
+import 'Add_associate/Associate_addNewVisit.dart';
+import 'Add_associate/associateSattingPasword.dart';
 import 'asscoiate_plot_scren/associateDrawerHistory.dart';
 
 
@@ -313,11 +315,41 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         MaterialPageRoute(builder: (context) => const HomePage()),
             (Route<dynamic> route) => false,
       );
-    } else if (title == "My Booking") {
+    } else if (title == "My Total Booking") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()),
       );
+    } else if (title == "Income History") {
+      Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PaymentReceivedScreen()),);
+    } else if (title == "Total income") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TotalBookingListScreen()),);
+
+    } else if (title == "Book New Plot") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()),);
+    } else if (title == "Our Visit list") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CommissionListScreen()),);
+
+    } else if (title == "Add client Visit") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const Associate_addNewVisit()),);
+
+    } else if (title == "Settings") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),);
+
+
+
     } else if (title == "My profile") {
       _navigateToProfile();
     } else {
@@ -480,14 +512,9 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const TotalBookingListScreen()));
                 } else if (item.title == "Income History") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const  PaymentReceivedScreen()));
-                } else if (item.title == "add Client Visit") {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CommissionListScreen(), // Correct
-                    ),
-                  );
-                } else if (item.title == "Our Total lists") {
+                } else if (item.title == "Add client Visit") {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const  Associate_addNewVisit ()));
+                }  else if (item.title == "Our Total lists") {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -672,7 +699,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                   _buildDrawerSection("OPERATIONS", [
                     _buildDrawerItem("Book New Plot", Icons.home_work, Colors.indigo),
                     _buildDrawerItem("Our Visit list", Icons.location_city, Colors.red),
-                    _buildDrawerItem("Add Client Visit ", Icons.add_location_alt, Colors.pink),
+                    _buildDrawerItem("Add client Visit", Icons.add_location_alt, Colors.pink),
                   ]),
                   _buildDrawerSection("SETTINGS", [
                     _buildDrawerItem("Settings", Icons.settings, Colors.grey),

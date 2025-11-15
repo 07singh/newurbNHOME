@@ -17,8 +17,7 @@ import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/Employ.dart';
 import 'LeavePage.dart';
-
-
+import 'PaymentHistoryScreen.dart';
 
 class HRDashboardPage extends StatefulWidget {
   final String userName;
@@ -103,7 +102,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+
     );
   }
 
@@ -165,29 +164,100 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
             ),
 
             _buildDrawerSectionHeader("EMPLOYEE MANAGEMENT"),
+            // UPDATED: Employee Management navigation items
             _buildExpandableDrawerItem(
               icon: Icons.people_alt_rounded,
               title: "Employee Management",
               children: [
-                _buildSubMenuItem("Add Employee", Icons.person_add_alt_1_rounded),
-                _buildSubMenuItem("View Employee", Icons.person_search_rounded),
-                _buildSubMenuItem("Attendance Regular", Icons.calendar_today_rounded),
-                _buildSubMenuItem("Attendance Repeat", Icons.repeat_rounded),
+                // Add Employee -> AddStaffScreen
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.person_add_alt_1_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("Add Employee", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => AddStaffScreen()));
+                    },
+                  ),
+                ),
+
+                // View Employee -> StaffListScreen
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.person_search_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("View Employee", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => StaffListScreen()));
+                    },
+                  ),
+                ),
+
+                // Attendance Regular -> AttendanceScreentHr
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.calendar_today_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("Attendance Regular", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => AttendanceScreentHr()));
+                    },
+                  ),
+                ),
+
+                // Attendance Repeat (unchanged)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.repeat_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("Attendance Repeat", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showSnackBar(context, "Selected: Attendance Repeat");
+                    },
+                  ),
+                ),
               ],
             ),
 
-            _buildDrawerSectionHeader("ATTENDANCE"),
-            _buildDrawerItem(
-                icon: Icons.calendar_today_rounded,
-                title: "Attendance Tracking",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AttendanceScreentHr()),
-                  );
-                }
+
+
+            // UPDATED: Plot Management with 2 options
+            _buildDrawerSectionHeader("PLOT MANAGEMENT"),
+            _buildExpandableDrawerItem(
+              icon: Icons.landscape_rounded,
+              title: "Plot Management",
+              children: [
+                // Booking Request
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.list_alt_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("Booking Request", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => PendingRequestsScreen(userRole: widget.userRole)));
+                    },
+                  ),
+                ),
+
+                // Book Now -> NoNav() (book plot)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.add_business_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("Book Now", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => NoNav()));
+                    },
+                  ),
+                ),
+              ],
             ),
-            _buildDrawerItem(icon: Icons.access_time_rounded, title: "Time & Attendance", onTap: () {}),
 
             _buildDrawerSectionHeader("SETTINGS"),
             _buildDrawerItem(icon: Icons.settings_rounded, title: "Settings", onTap: () {}),
@@ -337,12 +407,25 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     );
   }
 
+  // Add these two variables at the top of the class:
+  int pendingBookingCount = 0;
+  int paymentHistoryCount = 0;
+
+// Then use this updated widget
   Widget _buildStatsOverview() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Overview", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey.shade800)),
+        Text(
+          "Overview",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade800,
+          ),
+        ),
         const SizedBox(height: 16),
+
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -351,29 +434,48 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           mainAxisSpacing: 16,
           childAspectRatio: 1.2,
           children: [
-            _buildStatCard(title: "Total Employees", value: "247", icon: Icons.people_alt_rounded, color: Colors.blue, change: "+12 this month"),
+            // UPDATED: Card 1 -> Booking Request (Dynamic)
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const LeavePage()),
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        PendingRequestsScreen(userRole: widget.userRole),
+                  ),
                 );
               },
               child: _buildStatCard(
-                title: "On Leave Today",
-                value: "8",
-                icon: Icons.beach_access_rounded,
-                color: Colors.orange,
-                change: "2 planned, 6 unplanned",
+                title: "Booking Request",
+                value: pendingBookingCount.toString(), // DYNAMIC VALUE
+                icon: Icons.list_alt_rounded,
+                color: Colors.blue,
+                change: "Tap to view",
               ),
             ),
 
-
+            // UPDATED: Card 2 -> Payment History (Dynamic)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => PaymentHistoryScreen()),
+                );
+              },
+              child: _buildStatCard(
+                title: "Payment History",
+                value: paymentHistoryCount.toString(), // DYNAMIC VALUE
+                icon: Icons.payment_rounded,
+                color: Colors.orange,
+                change: "Tap to view",
+              ),
+            ),
           ],
         ),
       ],
     );
   }
+
 
   Widget _buildStatCard({required String title, required String value, required IconData icon, required Color color, required String change}) {
     return Container(
@@ -418,13 +520,20 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildActionButton("Add staff", Icons.person_add_alt_1_rounded, Colors.blue, AddStaffScreen()),
+              // UPDATED: 1 -> Attendance Record
+              _buildActionButton("Attendance Record", Icons.calendar_today_rounded, Colors.blue, AttendanceScreentHr()),
               const SizedBox(width: 12),
-              _buildActionButton("Booking Request", Icons.payment_rounded, Colors.green, PendingRequestsScreen(userRole: widget.userRole)),
+
+              // UPDATED: 2 -> Staff List
+              _buildActionButton("Staff List", Icons.people_alt_rounded, Colors.green, StaffListScreen()),
               const SizedBox(width: 12),
-              _buildActionButton("Leave Requests", Icons.beach_access_rounded, Colors.orange, LeaveRequestsScreen()),
+
+              // UPDATED: 3 -> Leave Page
+              _buildActionButton("Leave Page", Icons.beach_access_rounded, Colors.orange, LeavePage()),
               const SizedBox(width: 12),
-              _buildActionButton("booking plot", Icons.calendar_today_rounded, Colors.purple, NoNav()),
+
+              // Rest unchanged
+              _buildActionButton("booking Now", Icons.calendar_today_rounded, Colors.purple, NoNav()),
               const SizedBox(width: 12),
               _buildActionButton("Visitor list", Icons.analytics_rounded, Colors.red, VisitorListScreen ()),
               const SizedBox(width: 12),
@@ -515,28 +624,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 10, offset: const Offset(0, -2))]),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.blue.shade700,
-        unselectedItemColor: Colors.grey.shade500,
-        selectedLabelStyle: const TextStyle(fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Employees'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_rounded), label: 'Schedule'),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics_rounded), label: 'Reports'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_rounded), label: 'Settings'),
-        ],
-      ),
-    );
-  }
+
 
   void _showLogoutConfirmation(BuildContext context) {
     showDialog(

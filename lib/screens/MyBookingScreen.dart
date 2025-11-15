@@ -8,6 +8,7 @@ import '../asscoiate_plot_scren/assoicateBookingHistory.dart';
 import '/Model/modelofindividual.dart';
 import '/service/service_of_indiviadual.dart';
 import '/service/auth_manager.dart';
+import '/utils/image_utils.dart';
 
 class MyBookingScreen extends StatefulWidget {
   final dynamic phone;
@@ -369,7 +370,7 @@ class _PaymentModalState extends State<PaymentModal> {
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now(), // Only allow past and today's date
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -600,15 +601,34 @@ class _PaymentModalState extends State<PaymentModal> {
       _showError('Please upload payment proof');
       return;
     }
+    
+    // Validate payment date - should not be in the future
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    if (selectedDay.isAfter(today)) {
+      _showError('Payment date cannot be in the future. Please select today or a past date.');
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
-      // Convert image to base64 if provided
+      // Convert image to base64 if provided (with compression)
       String? base64Image;
       if (_selectedImage != null) {
-        final bytes = await _selectedImage!.readAsBytes();
-        base64Image = base64Encode(bytes);
+        try {
+          base64Image = await ImageUtils.imageToBase64(
+            _selectedImage!,
+            compress: true,
+            quality: 85,
+          );
+        } catch (e) {
+          if (!mounted) return;
+          _showError('Failed to process image: ${e.toString()}');
+          setState(() => _isSubmitting = false);
+          return;
+        }
       }
 
       final method = _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod);

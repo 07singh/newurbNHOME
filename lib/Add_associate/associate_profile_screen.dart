@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '/Model/associate_profile_model.dart';
 import '/service/associate_profile_service.dart';
+import '/service/associateProfileChangeService.dart';
 
 class AssociateProfileScreen extends StatefulWidget {
   final String phone;
@@ -12,9 +14,14 @@ class AssociateProfileScreen extends StatefulWidget {
 }
 
 class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
-  final AssociateProfileService _service = AssociateProfileService();
+  final AssociateProfileService _profileService = AssociateProfileService();
+  final AssociateProfileChangeService _changeService = AssociateProfileChangeService();
+  final ImagePicker _imagePicker = ImagePicker();
+
   late Future<AssociateProfile?> _futureProfile;
   String? _profileImageUrl;
+  File? _selectedImage;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -23,15 +30,114 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   }
 
   Future<AssociateProfile?> _loadProfile() async {
-    final response = await _service.fetchProfile(widget.phone);
-    if (response != null) {
-      _profileImageUrl = "https://realapp.cheenu.in${response.profileImageUrl ?? ''}";
+    try {
+      final response = await _profileService.fetchProfile(widget.phone);
+      if (response != null) {
+        _profileImageUrl = "https://realapp.cheenu.in${response.profileImageUrl ?? ''}";
+      }
+      return response;
+    } catch (e) {
+      throw Exception('Failed to load profile: $e');
     }
-    return response;
   }
 
   Future<void> _refresh() async {
-    setState(() => _futureProfile = _loadProfile());
+    setState(() {
+      _futureProfile = _loadProfile();
+      _selectedImage = null; // Reset selected image after refresh
+    });
+  }
+
+  Future<void> _showImageSourceDialog() async {
+    if (_isUploading) return;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Change Profile Picture"),
+          content: const Text("Choose image source"),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          actions: [
+            _buildDialogButton("Camera", Icons.camera_alt, () {
+              Navigator.pop(context);
+              _pickImage(ImageSource.camera);
+            }),
+            _buildDialogButton("Gallery", Icons.photo_library, () {
+              Navigator.pop(context);
+              _pickImage(ImageSource.gallery);
+            }),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogButton(String text, IconData icon, VoidCallback onPressed) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      label: Text(text),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.deepPurple,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        await _uploadImage(File(pickedFile.path));
+      }
+    } catch (e) {
+      _showSnackBar("Failed to pick image: ${e.toString()}");
+    }
+  }
+
+  Future<void> _uploadImage(File image) async {
+    setState(() => _isUploading = true);
+
+    try {
+      final response = await _changeService.changeProfileImage(widget.phone, image);
+
+      if (response.status == "Success") {
+        setState(() {
+          _selectedImage = image;
+          _profileImageUrl = null; // Force refresh from server
+        });
+        _showSnackBar(response.message);
+        await _refresh(); // Refresh profile data
+      } else {
+        _showSnackBar("Failed: ${response.message}");
+      }
+    } catch (e) {
+      _showSnackBar("Upload failed: ${e.toString()}");
+    } finally {
+      setState(() => _isUploading = false);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
   @override
@@ -40,6 +146,19 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        title: const Text(
+          "Associate Profile",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+      ),
       body: FutureBuilder<AssociateProfile?>(
         future: _futureProfile,
         builder: (context, snapshot) {
@@ -48,173 +167,304 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const SizedBox(height: 12),
-                  Text(
-                    "Something went wrong",
-                    style: const TextStyle(color: Colors.deepPurple),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _refresh,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
+            return _buildErrorWidget(snapshot.error.toString());
           }
 
           final profile = snapshot.data;
           if (profile == null) {
-            return const Center(child: Text("No profile data found"));
+            return _buildErrorWidget("No profile data found");
           }
 
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                // ===== Header =====
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      height: h * 0.22,
-                      width: double.infinity,
-                      color: Colors.deepPurple,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                              const Text(
-                                "Associate Profile",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 48),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // ===== Profile Picture =====
-                    Positioned(
-                      bottom: -105
-                      ,
-                      left: 0,
-                      right: 0,
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 55,
-                            backgroundColor: Colors.white,
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundImage: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                                  ? NetworkImage(_profileImageUrl!)
-                                  : const AssetImage('assets/user.png') as ImageProvider,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            profile.fullName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "ID: ${profile.associateId}",
-                            style: const TextStyle(color: Colors.black54, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 90),
-
-                // ===== Details Card =====
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          _buildInfoRow("Phone", profile.phone),
-                          _divider(),
-                          _buildInfoRow("Email", profile.email),
-                          _divider(),
-                          _buildInfoRow("Address", profile.currentAddress),
-                          _divider(),
-                          _buildInfoRow("City", profile.city),
-                          _divider(),
-                          _buildInfoRow("State", profile.state),
-                          _divider(),
-                          _buildInfoRow("Pincode", profile.pincode),
-                          _divider(),
-                          _buildInfoRow("Aadhaar No", profile.aadhaarNo),
-                          _divider(),
-                          _buildInfoRow("PAN No", profile.panNo),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // ===== Documents Section (Optional) =====
-
-
-
-
-
-              ],
-            ),
-          );
+          return _buildProfileContent(profile, h);
         },
       ),
     );
   }
 
+  Widget _buildErrorWidget(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, color: Colors.red.shade400, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              "Something went wrong",
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh, size: 20),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileContent(AssociateProfile profile, double height) {
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              // Header with Profile
+              _buildProfileHeader(profile, height),
+
+              const SizedBox(height: 70),
+
+              // Details Card
+              _buildDetailsCard(profile),
+
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+
+        // Uploading Overlay
+        if (_isUploading) _buildUploadingOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildProfileHeader(AssociateProfile profile, double height) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Background
+        Container(
+          height: height * 0.15,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.deepPurple,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+        ),
+
+        // Profile Info
+        Positioned(
+          top: height * 0.15 - 60,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              // Profile Avatar
+              _buildProfileAvatar(),
+              const SizedBox(height: 12),
+
+              // Name
+              Text(
+                profile.fullName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // Associate ID
+              Text(
+                "ID: ${profile.associateId}",
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileAvatar() {
+    return GestureDetector(
+      onTap: _isUploading ? null : _showImageSourceDialog,
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: _getProfileImage(),
+              child: _isUploading
+                  ? Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                ),
+              )
+                  : null,
+            ),
+          ),
+
+          // Edit Icon
+          if (!_isUploading)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                height: 36,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsCard(AssociateProfile profile) {
+    final infoItems = [
+      _InfoItem("Phone", profile.phone),
+      _InfoItem("Email", profile.email),
+      _InfoItem("Address", profile.currentAddress),
+      _InfoItem("City", profile.city),
+      _InfoItem("State", profile.state),
+      _InfoItem("Pincode", profile.pincode),
+      _InfoItem("Aadhaar No", profile.aadhaarNo),
+      _InfoItem("PAN No", profile.panNo),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              const Text(
+                "Personal Details",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.deepPurple,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...infoItems.map((item) => Column(
+                children: [
+                  _buildInfoRow(item.label, item.value),
+                  if (item != infoItems.last) _divider(),
+                ],
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUploadingOverlay() {
+    return Container(
+      color: Colors.black54,
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Colors.white)),
+            SizedBox(height: 16),
+            Text(
+              "Updating Profile...",
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ImageProvider _getProfileImage() {
+    if (_selectedImage != null) {
+      return FileImage(_selectedImage!);
+    } else if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+      return NetworkImage(_profileImageUrl!);
+    } else {
+      return const AssetImage('assets/user.png') as ImageProvider;
+    }
+  }
+
   // ===== Helper Widgets =====
   Widget _buildInfoRow(String label, String? value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          Flexible(
+          Expanded(
+            flex: 3,
             child: Text(
               value ?? '-',
               textAlign: TextAlign.right,
@@ -230,34 +480,17 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   }
 
   Widget _divider() {
-    return const Divider(color: Colors.grey, thickness: 0.3, height: 4);
-  }
-
-  Widget _buildImageCard(String label, String? imagePath) {
-    final fullUrl = imagePath != null && imagePath.isNotEmpty
-        ? "https://realapp.cheenu.in$imagePath"
-        : "";
-
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          ListTile(title: Text(label)),
-          if (fullUrl.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-              child: Image.network(fullUrl,
-                  height: 180, width: double.infinity, fit: BoxFit.cover),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text("No image uploaded"),
-            ),
-        ],
-      ),
+    return Divider(
+      color: Colors.grey.shade300,
+      thickness: 1,
+      height: 1,
     );
   }
+}
+
+class _InfoItem {
+  final String label;
+  final String? value;
+
+  _InfoItem(this.label, this.value);
 }

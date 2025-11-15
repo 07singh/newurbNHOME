@@ -336,7 +336,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     } else if (title == "Our Visit list") {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const CommissionListScreen()),);
+        MaterialPageRoute(builder: (context) => CommissionListScreen( )),);
 
     } else if (title == "Add client Visit") {
       Navigator.push(
@@ -518,10 +518,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CommissionListScreen()
-
-
-
+                      builder: (context) => CommissionListScreen(),
                     ),
                   );
                 } else {

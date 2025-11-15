@@ -90,6 +90,18 @@ class BookingService {
 
     final url = Uri.parse('$_base/AddPayment/Add');
 
+    // Validate payment date - should not be in the future
+    try {
+      final parsedDate = DateTime.parse(paymentDate.trim());
+      final now = DateTime.now();
+      if (parsedDate.isAfter(now)) {
+        throw ArgumentError('Payment date cannot be in the future');
+      }
+    } catch (e) {
+      if (e is ArgumentError) rethrow;
+      throw ArgumentError('Invalid payment date format. Expected YYYY-MM-DD');
+    }
+
     // Build request body matching API specification exactly:
     // {
     //   "Booking_Id": 7,
@@ -161,9 +173,10 @@ class BookingService {
       // Try to extract error message from response body
       String errorMessage = 'Payment submission failed';
       String? detailedError;
+      Map<String, dynamic>? errorJson;
       
       try {
-        final errorJson = json.decode(response.body) as Map<String, dynamic>;
+        errorJson = json.decode(response.body) as Map<String, dynamic>;
         errorMessage = errorJson['Message']?.toString() ?? 
                       errorJson['message']?.toString() ?? 
                       errorJson['error']?.toString() ?? 
@@ -172,7 +185,8 @@ class BookingService {
         // Try to get more detailed error information
         detailedError = errorJson['ExceptionMessage']?.toString() ?? 
                        errorJson['exceptionMessage']?.toString() ??
-                       errorJson['detail']?.toString();
+                       errorJson['detail']?.toString() ??
+                       errorJson['StackTrace']?.toString();
       } catch (_) {
         // If response is not JSON, try to use raw body if it's meaningful
         if (response.body.isNotEmpty && response.body.length < 200) {
@@ -185,7 +199,28 @@ class BookingService {
         // Server error - provide user-friendly message with retry suggestion
         if (errorMessage.toLowerCase().contains('error has occurred') || 
             errorMessage.toLowerCase().contains('an error has occurred')) {
-          errorMessage = 'Server error occurred. Please try again in a moment. If the problem persists, contact support.';
+          // Check for common server-side issues
+          String helpfulMessage = 'Server error occurred. ';
+          
+          // Check if it might be a date validation issue
+          final paymentDateStr = body['Payment_Date']?.toString() ?? '';
+          try {
+            final paymentDate = DateTime.parse(paymentDateStr);
+            final now = DateTime.now();
+            if (paymentDate.isAfter(now)) {
+              helpfulMessage += 'Payment date cannot be in the future. Please select today or a past date.';
+            } else {
+              helpfulMessage += 'Please check:\n';
+              helpfulMessage += '• Payment date is valid (not in future)\n';
+              helpfulMessage += '• Amount does not exceed pending amount\n';
+              helpfulMessage += '• Booking ID is valid\n';
+              helpfulMessage += '\nIf the problem persists, contact support.';
+            }
+          } catch (_) {
+            helpfulMessage += 'Please verify all payment details and try again. If the problem persists, contact support.';
+          }
+          
+          errorMessage = helpfulMessage;
         } else {
           errorMessage = 'Server error: $errorMessage. Please try again.';
         }
@@ -204,6 +239,9 @@ class BookingService {
       if (detailedError != null && detailedError.isNotEmpty) {
         print('AddPayment detailed error: $detailedError');
       }
+      
+      // Log full error response for debugging
+      print('AddPayment full error response: $errorJson');
       
       // Throw exception with the extracted error message
       throw Exception(errorMessage);

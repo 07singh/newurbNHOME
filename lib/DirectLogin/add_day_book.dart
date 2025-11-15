@@ -1,7 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '/Model/day_book_model.dart';
-import '/service/add_book_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddDayBookScreen extends StatefulWidget {
   const AddDayBookScreen({Key? key}) : super(key: key);
@@ -16,15 +16,35 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
   DateTime _selectedDateTime = DateTime.now();
 
   final TextEditingController _dateTimeController =
-  TextEditingController(text: DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now()));
-  final TextEditingController _purposeController = TextEditingController();
+  TextEditingController(text: DateFormat('dd MMM yyyy – hh:mm a').format(DateTime.now()));
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _employeeController = TextEditingController();
-  final TextEditingController _spendByController = TextEditingController();
+  final TextEditingController _remarkController = TextEditingController();
 
-  final List<String> _categories = ['Payment', 'Expense', 'Advance'];
-  String? _selectedCategory;
-  bool _isLoading = false;
+  File? _pickedImage;
+
+  final List<String> _purposeList = [
+    'Labour Payment',
+    'Material Payment',
+    'Petrol Payment',
+    'Car Parking Fare',
+    'Office Expense',
+    'Kisan Payment',
+  ];
+
+  String? _selectedPurpose;
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _pickedImage = File(image.path);
+      });
+    }
+  }
 
   Future<void> _pickDateTime() async {
     final DateTime? pickedDate = await showDatePicker(
@@ -32,6 +52,16 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
       initialDate: _selectedDateTime,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
+      builder: (ctx, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (pickedDate != null) {
@@ -50,217 +80,243 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
             pickedTime.minute,
           );
           _dateTimeController.text =
-              DateFormat('yyyy-MM-dd HH:mm').format(_selectedDateTime);
+              DateFormat('dd MMM yyyy – hh:mm a').format(_selectedDateTime);
         });
       }
     }
   }
 
-  Future<void> _submitForm() async {
+  void _submitForm() {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
-    DayBook newEntry = DayBook(
-      id: 0,
-      employeeName: _employeeController.text,
-      dateTime: _selectedDateTime,
-      amount: double.parse(_amountController.text),
-      purpose: _purposeController.text,
-      spendBy: _spendByController.text,
-    );
-
-    final result = await DayBookService.addDayBook(newEntry);
-
-    setState(() => _isLoading = false);
-
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result['message'] ?? 'Something went wrong'),
-        backgroundColor: result['success'] == true ? Colors.green : Colors.red,
+      const SnackBar(
+        content: Text("Entry Saved Successfully"),
+        backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
     );
 
-    if (result['success'] == true) {
-      Navigator.pop(context, true);
-    }
+    Navigator.pop(context, true);
   }
 
-  @override
-  void dispose() {
-    _dateTimeController.dispose();
-    _purposeController.dispose();
-    _amountController.dispose();
-    _employeeController.dispose();
-    _spendByController.dispose();
-    super.dispose();
-  }
-
-  Widget _buildTextField({
+  Widget _inputField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
     bool readOnly = false,
     VoidCallback? onTap,
-    String? Function(String?)? validator,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
         readOnly: readOnly,
+        maxLines: maxLines,
+        onTap: onTap,
         keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
         ),
-        onTap: onTap,
-        validator: validator,
+        validator: (value) =>
+        value == null || value.isEmpty ? 'Required field' : null,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final height = MediaQuery.of(context).size.height;
-
     return Scaffold(
+      backgroundColor: const Color(0xffFAFAFA),
       appBar: AppBar(
         title: const Text(
           'Add Day Book Entry',
           style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFFFFD700),
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xff7F00FF), Color(0xffE100FF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        elevation: 0,
+        automaticallyImplyLeading: true,
+        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFFFBE50A),
+                Color(0xFFFBE50A),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
-        child: SafeArea(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: Colors.white))
-              : SingleChildScrollView(
-            child: Container(
-              width: width,
-              constraints: BoxConstraints(
-                minHeight: height - 32,
-              ),
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+      ),
+
+
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
                 ),
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildTextField(
-                      controller: _employeeController,
-                      label: 'Employee Name',
-                      icon: Icons.person,
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter employee name' : null,
-                    ),
-                    _buildTextField(
-                      controller: _spendByController,
-                      label: 'Spend By (Phone)',
-                      icon: Icons.phone,
-                      keyboardType: TextInputType.phone,
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter phone number' : null,
-                    ),
-                    _buildTextField(
-                      controller: _dateTimeController,
-                      label: 'Date & Time',
-                      icon: Icons.calendar_today,
-                      readOnly: true,
-                      onTap: _pickDateTime,
-                    ),
-                    _buildTextField(
-                      controller: _purposeController,
-                      label: 'Purpose',
-                      icon: Icons.edit_note,
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter purpose' : null,
-                    ),
-                    _buildTextField(
-                      controller: _amountController,
-                      label: 'Amount (₹)',
-                      icon: Icons.currency_rupee,
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) return 'Enter amount';
-                        if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                          return 'Enter valid amount';
-                        }
-                        return null;
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _inputField(
+                    controller: _nameController,
+                    label: "User Name",
+                    icon: Icons.person,
+                  ),
+
+                  _inputField(
+                    controller: _mobileController,
+                    label: "Mobile Number",
+                    icon: Icons.phone,
+                    keyboardType: TextInputType.phone,
+                  ),
+
+                  _inputField(
+                    controller: _dateTimeController,
+                    label: "Date & Time",
+                    icon: Icons.calendar_month,
+                    readOnly: true,
+                    onTap: _pickDateTime,
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedPurpose,
+                      borderRadius: BorderRadius.circular(14),
+                      decoration: InputDecoration(
+                        labelText: 'Purpose',
+                        prefixIcon: const Icon(Icons.list_alt),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none),
+                      ),
+                      items: _purposeList.map((item) {
+                        return DropdownMenuItem(
+                          value: item,
+                          child: Text(item),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedPurpose = value);
                       },
+                      validator: (value) =>
+                      value == null ? 'Please select purpose' : null,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        decoration: InputDecoration(
-                          labelText: 'Category',
-                          prefixIcon: const Icon(Icons.category),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        items: _categories.map((category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        onChanged: (value) => setState(() => _selectedCategory = value),
-                        validator: (value) =>
-                        value == null ? 'Please select category' : null,
+                  ),
+
+                  _inputField(
+                    controller: _amountController,
+                    label: "Amount (₹)",
+                    icon: Icons.currency_rupee,
+                    keyboardType: TextInputType.number,
+                  ),
+
+                  _inputField(
+                    controller: _remarkController,
+                    label: "Remark",
+                    icon: Icons.note_alt,
+                    maxLines: 3,
+                  ),
+
+                  const SizedBox(height: 10),
+                  Text(
+                    "Upload Screenshot",
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 8),
+
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      height: 130,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.grey.shade100,
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _submitForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      child: Center(
+                        child: _pickedImage == null
+                            ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.upload, size: 40, color: Colors.yellow),
+                            SizedBox(height: 6),
+                            Text("Tap to Upload")
+                          ],
+                        )
+                            : ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.file(
+                            _pickedImage!,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        child: const Text(
-                          'SUBMIT ENTRY',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1.2,
-                          ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.yellow,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: const Text(
+                        'SUBMIT ENTRY',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

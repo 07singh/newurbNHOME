@@ -1,4 +1,6 @@
+// screens/change_password_screen.dart
 import 'package:flutter/material.dart';
+import '/service/associateForgetPassword_service.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
   const ChangePasswordScreen({super.key});
@@ -48,6 +50,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
   bool _obscureOldPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   void _toggleOldPasswordVisibility() {
     setState(() {
@@ -67,16 +70,38 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
     });
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Form is valid, proceed with password change
-      _showSuccessDialog();
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await ChangePasswordService.changePassword(
+        oldPassword: _oldPasswordController.text.trim(),
+        newPassword: _newPasswordController.text.trim(),
+        confirmPassword: _confirmPasswordController.text.trim(),
+      );
+
+      if (response.status == "Success") {
+        _showSuccessDialog(response.message);
+      } else {
+        _showErrorDialog(response.message);
+      }
+    } catch (e) {
+      _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(String message) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
@@ -85,13 +110,35 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
             Text('Success'),
           ],
         ),
-        content: const Text('Your password has been changed successfully!'),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context); // Close dialog
               Navigator.pop(context); // Go back to previous screen
             },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red, size: 24),
+            SizedBox(width: 8),
+            Text('Error'),
+          ],
+        ),
+        content: Text(error),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
             child: const Text('OK'),
           ),
         ],
@@ -202,6 +249,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
           controller: controller,
           obscureText: obscureText,
           validator: validator,
+          enabled: !_isLoading,
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: const Icon(Icons.lock_outline, color: Colors.deepPurple),
@@ -230,7 +278,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _submitForm,
+        onPressed: _isLoading ? null : _submitForm,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.deepPurple,
           foregroundColor: Colors.white,
@@ -240,7 +288,16 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
           ),
           elevation: 2,
         ),
-        child: const Text(
+        child: _isLoading
+            ? const SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        )
+            : const Text(
           'Change Password',
           style: TextStyle(
             fontSize: 16,
@@ -272,9 +329,8 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
           ),
           const SizedBox(height: 8),
           _buildRequirementItem('At least 6 characters long'),
-          _buildRequirementItem('Include uppercase and lowercase letters'),
-          _buildRequirementItem('Include numbers and special characters'),
           _buildRequirementItem('Should not match old password'),
+          _buildRequirementItem('New and confirm password must match'),
         ],
       ),
     );
@@ -287,11 +343,13 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
         children: [
           Icon(Icons.circle, size: 6, color: Colors.blue[600]),
           const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              color: Colors.blue[700],
-              fontSize: 12,
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.blue[700],
+                fontSize: 12,
+              ),
             ),
           ),
         ],

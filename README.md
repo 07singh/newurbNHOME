@@ -1,59 +1,76 @@
-# 🏡 New Urban Homes – Real Estate & Plot Booking App
-
-### 📱 Overview  
-**New Urban Homes** is a complete real estate and plot-booking management application built using **Flutter**.  
-It provides modules for customers, associates, HR, directors, and employees — with real-time plot availability, booking flow, dashboards, and attendance tracking.  
-
-The app uses **.NET Core backend**, **SQL Server**, and follows **MVVM clean architecture** for maintainability.
+# 🏡 New Urban Homes – Real Estate & Plot Booking Mobile App  
+A complete Flutter-based multi-role real estate management system.
 
 ---
 
-## 🚀 Features  
-
-### 🧑‍💼 User Features  
-- ✅ Plot availability & booking system  
-- ✅ Real-time plot layout visualization  
-- ✅ Booking history & receipt download  
-- ✅ Secure login & OTP verification  
-- ✅ Profile management  
-
-### 👨‍💼 Admin / Director Features  
-- ✅ Analytics dashboard  
-- ✅ Manage plots, bookings, associates, employees  
-- ✅ Payment & transaction monitoring  
-- ✅ Real-time booking updates  
-
-### 🧑‍💼 HR & Employee Features  
-- ✅ Attendance module  
-- ✅ Daily task/work management  
-- ✅ Employee reports  
-- ✅ Leave and profile management  
+## 📱 App Modules Included
+- **Associate Module**
+- **HR Module**
+- **Director Module**
+- **Plot Map Viewer (Interactive)**
 
 ---
 
-## 🧱 Tech Stack  
-- **Frontend:** Flutter  
-- **Language:** Dart  
-- **Backend:** .NET Core (C#)  
-- **Networking:** HTTP package + Interceptors  
-- **Design:** Material UI + Custom Widgets  
+## 🚀 Key Features
+
+### 🔷 Customer / Associate Features
+- Real-time plot status (Available / Pending / Booked / Sold)
+- Plot booking system
+- Booking history
+- Income dashboard
+- Client visit tracking
+
+### 🔷 HR Features
+- Attendance management
+- Staff list & leave management
+- Daily activity tracking
+- Payment & booking monitoring
+
+### 🔷 Director/Admin Features
+- Full analytics dashboard
+- Associate management
+- Booking approvals
+- Day book & business reports
+
+### 🔷 Plot Map Module
+- Full colony layout
+- Color-based status legend
+- Real-time update on each plot
+- Zoom & highlight feature
 
 ---
 
-## 📸 Screenshots  
-(Add your images here when ready)
+## 🧱 Tech Stack
 
-| Dashboard | Plot Layout | Associate Panel | Booking Page |
-|-----------|-------------|------------------|---------------|
-| ![](link1) | ![](link2) | ![](link3) | ![](link4) |
-
-> Replace `link1`, `link2`, etc. with your screenshot URLs.
+| Component | Technology |
+|----------|------------|
+| Framework | Flutter |
+| State Management | Provider / GetX |
+| API Handling | Dio + Interceptors + Token Auth |
+| Backend | .NET Core |
+| Database | SQL Server |
+| Architecture | Clean + MVVM |
 
 ---
 
-## ⚙️ Installation  
+## 📸 App Screenshots
+
+### 🔹 1. Associate Dashboard
+![Associate Dashboard](./assets/images/1.jpg)
+
+### 🔹 2. HR Dashboard
+![HR Dashboard](./assets/images/2.jpg)
+
+### 🔹 3. Colony Plot Layout (Interactive Map)
+![Plot Layout](./assets/images/3.jpg)
+
+### 🔹 4. Director Dashboard
+![Director Dashboard](./assets/images/4.jpg)
+
+---
+
+## ⚙️ Running the App
+
 ```bash
-git clone https://github.com/yourusername/newurbanhome.git
-cd newurbanhome
 flutter pub get
 flutter run

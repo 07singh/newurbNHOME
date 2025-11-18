@@ -5,17 +5,17 @@ import 'package:image_picker/image_picker.dart';
 import '/Model/profile_model.dart';
 import '/service/profile_service.dart';
 
-class  ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatefulWidget {
   final String? phone;
   final String? position;
 
-  const  ProfileScreen({super.key, this.phone, this.position});
+  const ProfileScreen({super.key, this.phone, this.position});
 
   @override
-  State< ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State< ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> {
   final _storage = const FlutterSecureStorage();
   final StaffProfileService _service = StaffProfileService();
   late Future<StaffProfileResponse> _futureProfile;
@@ -55,6 +55,24 @@ class _ProfileScreenState extends State< ProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.yellow,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Profile Details",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+            fontSize: 22,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: FutureBuilder<StaffProfileResponse>(
         future: _futureProfile,
         builder: (context, snapshot) {
@@ -84,82 +102,51 @@ class _ProfileScreenState extends State< ProfileScreen> {
             physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
-                // ===== Header =====
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      height: h * 0.22,
-                      width: double.infinity,
-                      color: Colors.yellow,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                              const Text(
-                                "Profile Details",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 48),
-                            ],
+                // ===== Header Background =====
+                Container(
+                  height: h * 0.15,
+                  width: double.infinity,
+                  color: Colors.yellow,
+                ),
+
+                // ===== Profile Picture Section =====
+                Transform.translate(
+                  offset: const Offset(0, -60),
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: _changePicture,
+                        child: CircleAvatar(
+                          radius: 55,
+                          backgroundColor: Colors.white,
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage: _localImagePath != null
+                                ? FileImage(File(_localImagePath!))
+                                : (_profileImageUrl != null
+                                ? NetworkImage(_profileImageUrl!)
+                                : const AssetImage('assets/profile_placeholder.png'))
+                            as ImageProvider,
                           ),
                         ),
                       ),
-                    ),
-
-                    // ===== Profile Picture =====
-                    Positioned(
-                      bottom: -75,
-                      left: 0,
-                      right: 0,
-                      child: Column(
-                        children: [
-                          GestureDetector(
-                            onTap: _changePicture,
-                            child: CircleAvatar(
-                              radius: 55,
-                              backgroundColor: Colors.white,
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundImage: _localImagePath != null
-                                    ? FileImage(File(_localImagePath!))
-                                    : (_profileImageUrl != null
-                                    ? NetworkImage(_profileImageUrl!)
-                                    : const AssetImage('assets/profile_placeholder.png'))
-                                as ImageProvider,
-                              ),
-                            ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _changePicture,
+                        child: const Text(
+                          "Change Picture",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
                           ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: _changePicture,
-                            child: const Text(
-                              "Change Picture",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: 80),
+                const SizedBox(height: 20),
 
                 // ===== Card Section =====
                 Padding(

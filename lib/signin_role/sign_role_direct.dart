@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import '/service/login_service.dart';
@@ -23,6 +24,7 @@ class _SignInPagedState extends State<SignInPaged> {
   final loginService = LoginService();
 
   bool _isLoading = false;
+  bool _obscurePassword = true; // 👈 Added for eye icon toggle
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -33,7 +35,6 @@ class _SignInPagedState extends State<SignInPaged> {
       final phone = phoneController.text.trim();
       final password = passwordController.text.trim();
 
-      // Call the login API
       final LoginApi? loginData =
       await loginService.loginUser(phone, password, "Director");
 
@@ -41,14 +42,12 @@ class _SignInPagedState extends State<SignInPaged> {
 
       if (loginData != null && loginData.statuscode.toLowerCase() == "success") {
         if ((loginData.position ?? '').toLowerCase() == 'director') {
-          // Save in secure storage (keeping for backward compatibility)
           await storage.write(key: 'user_id', value: loginData.id.toString());
           await storage.write(key: 'user_name', value: loginData.name ?? '');
           await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
           await storage.write(key: 'user_role', value: loginData.position ?? '');
           await storage.write(key: 'profile_pic', value: loginData.profilePic ?? '');
 
-          // Save session using Hive for persistent login
           final session = UserSession.fromLogin(
             userId: loginData.id.toString(),
             userName: loginData.name ?? 'Unknown',
@@ -59,14 +58,12 @@ class _SignInPagedState extends State<SignInPaged> {
             phone: loginData.mobile,
             position: loginData.position,
           );
-          
+
           await AuthManager.saveSession(session);
 
-          // Save in Provider
           Provider.of<UserProvider>(context, listen: false)
               .setUser(loginData.name ?? 'Unknown', loginData.position ?? 'Director');
 
-          // Navigate to DirectLoginPage
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -156,8 +153,15 @@ class _SignInPagedState extends State<SignInPaged> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // 🔥 PHONE FIELD
                     TextFormField(
                       controller: phoneController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       decoration: InputDecoration(
                         labelText: "Enter Phone Number",
                         border: OutlineInputBorder(
@@ -165,24 +169,50 @@ class _SignInPagedState extends State<SignInPaged> {
                         ),
                         prefixIcon: const Icon(Icons.phone, color: Colors.blueAccent),
                       ),
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter your phone number' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Enter your phone number';
+                        } else if (value.length != 10) {
+                          return 'Phone number must be exactly 10 digits';
+                        }
+                        return null;
+                      },
                     ),
+
                     const SizedBox(height: 20),
+
+                    // 🔥 PASSWORD FIELD WITH EYE ICON
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: "Enter Password",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         prefixIcon: const Icon(Icons.lock, color: Colors.blueAccent),
+
+                        // 👇 Eye icon added here
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.blueAccent,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your password' : null,
                     ),
+
                     const SizedBox(height: 30),
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

@@ -308,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.today_rounded,
                     Colors.deepPurple,
                     LinearGradient(colors: [Colors.deepPurple, Colors.purple]),
-                    TodayFlowupPage(),
+                    TodayFollowupFormPage(),
                   ),
                   const SizedBox(width: 12),
                   _buildFlowUpButton(

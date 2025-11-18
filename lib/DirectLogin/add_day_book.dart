@@ -156,8 +156,8 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFFFBE50A),
-                Color(0xFFFBE50A),
+                Color(0xFFC1B00A),
+                Color(0xFFBFAF12),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,

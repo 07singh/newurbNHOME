@@ -559,7 +559,7 @@ class _DirectloginPageState extends State<DirectloginPage>
                 },
               ),
               _buildStatCard(
-                title: "Booking Plot",
+                title: "Booking Plot Now",
                 value: "85",
                 icon: Icons.event_available,
                 color: Colors.green,

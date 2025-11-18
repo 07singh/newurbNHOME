@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/service/login_service.dart';
 import '/Model/login_model.dart';
@@ -21,6 +22,7 @@ class _SignInPagehState extends State<SignInPageh> {
   final loginService = LoginService();
 
   bool _isLoading = false;
+  bool _obscurePassword = true; // 👈 Show/hide toggle
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -31,22 +33,18 @@ class _SignInPagehState extends State<SignInPageh> {
       String phone = phoneController.text.trim();
       String password = passwordController.text.trim();
 
-      // Call the login API
       LoginApi? loginData = await loginService.loginUser(phone, password, "HR");
 
       setState(() => _isLoading = false);
 
       if (loginData != null && loginData.statuscode.toLowerCase() == "success") {
-        // Only HR can login
         if ((loginData.position ?? '').toLowerCase() == 'hr') {
-          // Store user details securely (keeping for backward compatibility)
           await storage.write(key: 'user_id', value: loginData.id.toString());
           await storage.write(key: 'user_name', value: loginData.name ?? '');
           await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
           await storage.write(key: 'user_role', value: loginData.position ?? '');
           await storage.write(key: 'profile_pic', value: loginData.profilePic ?? '');
 
-          // Save session using Hive for persistent login
           final session = UserSession.fromLogin(
             userId: loginData.id.toString(),
             userName: loginData.name ?? 'Unknown',
@@ -57,10 +55,9 @@ class _SignInPagehState extends State<SignInPageh> {
             phone: loginData.mobile,
             position: loginData.position,
           );
-          
+
           await AuthManager.saveSession(session);
 
-          // Navigate to HR Dashboard
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -74,7 +71,6 @@ class _SignInPagehState extends State<SignInPageh> {
             ),
           );
         } else {
-          // Access denied for non-HR
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Access Denied: Only HR can login here'),
@@ -83,7 +79,6 @@ class _SignInPagehState extends State<SignInPageh> {
           );
         }
       } else {
-        // Login failed
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(loginData?.message ?? 'Login Failed'),
@@ -117,7 +112,7 @@ class _SignInPagehState extends State<SignInPageh> {
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -151,8 +146,15 @@ class _SignInPagehState extends State<SignInPageh> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // PHONE FIELD (10 digits only)
                     TextFormField(
                       controller: phoneController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       decoration: InputDecoration(
                         labelText: "Enter Phone Number",
                         border: OutlineInputBorder(
@@ -160,24 +162,39 @@ class _SignInPagehState extends State<SignInPageh> {
                         ),
                         prefixIcon: const Icon(Icons.phone, color: Colors.blueAccent),
                       ),
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter your phone number' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Enter your phone number';
+                        if (value.length != 10) return 'Phone number must be 10 digits';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
+
+                    // PASSWORD FIELD (eye icon)
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: "Enter Password",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         prefixIcon: const Icon(Icons.lock, color: Colors.blueAccent),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.blueAccent,
+                          ),
+                          onPressed: () {
+                            setState(() => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
                       ),
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your password' : null,
                     ),
                     const SizedBox(height: 30),
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

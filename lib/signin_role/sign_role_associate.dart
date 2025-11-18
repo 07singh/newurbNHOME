@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '/service/associatee_login_new_service.dart';
 import '/Model/associatate_new_login_model.dart';
 import '../Association_page.dart'; // Dashboard page
@@ -19,6 +20,7 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
 
   final AssociateLoginService service = AssociateLoginService();
   bool isLoading = false;
+  bool _obscurePassword = true; // 👈 show/hide password
 
   void login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -34,24 +36,20 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
       setState(() => isLoading = false);
 
       if (response.isSuccess) {
-        // ✅ Login successful
-        
-        // Save session using Hive for persistent login
-        // Note: Associate login API doesn't return user details, so we use phone as identifier
         final phone = phoneController.text.trim();
         final session = UserSession.fromLogin(
-          userId: phone, // Using phone as userId since API doesn't return ID
-          userName: 'Associate', // Default name, can be updated from profile later
+          userId: phone, // Using phone as userId
+          userName: 'Associate',
           userMobile: phone,
           userRole: 'Associate',
           loginType: 'associate',
-          profilePic: null, // No profile pic from login API
+          profilePic: null,
           phone: phone,
           position: 'Associate',
         );
-        
+
         await AuthManager.saveSession(session);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response.message),
@@ -59,7 +57,6 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
           ),
         );
 
-        // Navigate to Associate Dashboard
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -72,7 +69,6 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
           ),
         );
       } else {
-        // ❌ Login failed
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response.message),
@@ -106,7 +102,7 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -128,10 +124,7 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
                     SizedBox(
                       width: 180,
                       height: 180,
-                      child: Image.asset(
-                        "assets/logo3.png",
-                        fit: BoxFit.contain,
-                      ),
+                      child: Image.asset("assets/logo3.png", fit: BoxFit.contain),
                     ),
                     const SizedBox(height: 10),
                     const Text(
@@ -144,8 +137,15 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
+
+                    // PHONE FIELD (10 digits only)
                     TextFormField(
                       controller: phoneController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       decoration: InputDecoration(
                         labelText: "Enter Phone Number",
                         border: OutlineInputBorder(
@@ -153,24 +153,39 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
                         ),
                         prefixIcon: const Icon(Icons.phone, color: Colors.blueAccent),
                       ),
-                      validator: (value) =>
-                      value == null || value.isEmpty ? 'Enter your phone number' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Enter your phone number';
+                        if (value.length != 10) return 'Phone number must be 10 digits';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 20),
+
+                    // PASSWORD FIELD with eye icon
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: "Enter Password",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         prefixIcon: const Icon(Icons.lock, color: Colors.blueAccent),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.blueAccent,
+                          ),
+                          onPressed: () {
+                            setState(() => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
                       ),
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Enter your password' : null,
                     ),
                     const SizedBox(height: 30),
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -184,10 +199,8 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
                         ),
                         child: isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                          "Login",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                            : const Text("Login",
+                            style: TextStyle(fontSize: 18, color: Colors.white)),
                       ),
                     ),
                   ],

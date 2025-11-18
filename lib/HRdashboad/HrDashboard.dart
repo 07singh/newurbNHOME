@@ -16,6 +16,7 @@ import'/DirectLogin/add_staff.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/Employ.dart';
+import 'HrAddNotifation.dart';
 import 'LeavePage.dart';
 import 'PaymentHistoryScreen.dart';
 
@@ -82,7 +83,16 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none, size: 26), onPressed: () {}),
+          IconButton(
+              icon: const Icon(Icons.notifications_none, size: 26),
+              onPressed: () {
+                // Navigate to Notification Page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddHrNotificationPage()),
+                );
+              }
+          ),
           const SizedBox(width: 8),
         ],
       ),

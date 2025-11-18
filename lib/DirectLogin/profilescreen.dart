@@ -44,7 +44,7 @@ class _ttProfileScreenState extends State<ttProfileScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/Model/associate_commission_list_model.dart';
 import '/service/associate_commission_list_service.dart';
 
@@ -15,6 +16,10 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
 
   bool _isRefreshing = false;
   String _searchQuery = '';
+  static const TextStyle _phoneTextStyle = TextStyle(
+    fontWeight: FontWeight.w600,
+    color: Colors.blue,
+  );
 
   @override
   void initState() {
@@ -290,13 +295,7 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            client.contactNo,
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
+                          _buildPhoneText(client.contactNo),
                         ],
                       ),
                     ),
@@ -591,11 +590,57 @@ class _CommissionListScreenState extends State<CommissionListScreen> {
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: _isPhoneTitle(title) ? _buildPhoneText(value) : Text(value),
           ),
         ],
       ),
     );
+  }
+
+  bool _isPhoneTitle(String title) {
+    return title.toLowerCase().contains('phone') || title.toLowerCase().contains('contact');
+  }
+
+  Widget _buildPhoneText(String phone, {TextAlign align = TextAlign.start}) {
+    final trimmedPhone = phone.trim();
+    if (trimmedPhone.isEmpty) {
+      return Text(
+        phone,
+        textAlign: align,
+      );
+    }
+
+    return InkWell(
+      onTap: () => _callPhoneNumber(trimmedPhone),
+      child: Text(
+        trimmedPhone,
+        textAlign: align,
+        style: _phoneTextStyle,
+      ),
+    );
+  }
+
+  Future<void> _callPhoneNumber(String phone) async {
+    final sanitizedPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (sanitizedPhone.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone number not available'),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri(scheme: 'tel', path: sanitizedPhone);
+    final launched = await launchUrl(uri);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to initiate call to $phone'),
+        ),
+      );
+    }
   }
 
   Color _getAvatarColor(int id) {

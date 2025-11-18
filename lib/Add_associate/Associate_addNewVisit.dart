@@ -23,10 +23,7 @@ class _ClientFormPageState extends State<Associate_addNewVisit> {
 
   final List<String> projectList = [
     "Green Valley Residency",
-    "Elite City Phase 2",
-    "Skyline Apartments",
-    "Royal Gardens",
-    "Tech Park Plaza",
+    " Defence Phase 2",
   ];
 
   @override

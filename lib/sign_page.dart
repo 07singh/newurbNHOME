@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/service/login_service.dart';
 import '/Model/login_model.dart';
@@ -21,9 +22,10 @@ class _SignInPageState extends State<SignInPage> {
   final loginService = LoginService();
 
   bool _isLoading = false;
+  bool _obscurePassword = true; // 👈 Password hide/show toggle
 
-  // ✅ Position variable for TL/Sales
-  String position = 'TL'; // default TL
+  // Position dropdown
+  String position = 'TL';
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -33,21 +35,17 @@ class _SignInPageState extends State<SignInPage> {
     String phone = phoneController.text.trim();
     String password = passwordController.text.trim();
 
-    // ✅ Pass position to API
     LoginApi? loginData = await loginService.loginUser(phone, password, position);
 
     setState(() => _isLoading = false);
 
     if (loginData != null && loginData.statuscode == "Success") {
-      // ✅ Check if position is TL or Sales
       if (loginData.position == 'TL' || loginData.position == 'Sales Executive') {
-        // Save in secure storage (keeping for backward compatibility)
         await storage.write(key: 'user_id', value: (loginData.id ?? '').toString());
         await storage.write(key: 'user_name', value: loginData.name ?? '');
         await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
         await storage.write(key: 'user_role', value: loginData.position ?? '');
 
-        // Save session using Hive for persistent login
         final session = UserSession.fromLogin(
           userId: (loginData.id ?? '').toString(),
           userName: loginData.name ?? 'Unknown',
@@ -58,7 +56,7 @@ class _SignInPageState extends State<SignInPage> {
           phone: loginData.mobile,
           position: loginData.position,
         );
-        
+
         await AuthManager.saveSession(session);
 
         Navigator.pushReplacement(
@@ -92,7 +90,7 @@ class _SignInPageState extends State<SignInPage> {
         ),
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -115,6 +113,7 @@ class _SignInPageState extends State<SignInPage> {
                       height: 180,
                       child: Image.asset("assets/logo3.png", fit: BoxFit.contain),
                     ),
+
                     const SizedBox(height: 30),
 
                     const Text(
@@ -123,23 +122,19 @@ class _SignInPageState extends State<SignInPage> {
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.blueAccent,
-                        letterSpacing: 1.2,
                       ),
                     ),
+
                     const SizedBox(height: 20),
 
-                    // ✅ Dropdown for TL/Sales selection
+                    // Position Dropdown
                     DropdownButtonFormField<String>(
                       value: position,
                       items: const [
                         DropdownMenuItem(value: 'TL', child: Text('TL')),
                         DropdownMenuItem(value: 'Sales Executive', child: Text('Sales Executive')),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          position = value!;
-                        });
-                      },
+                      onChanged: (value) => setState(() => position = value!),
                       decoration: InputDecoration(
                         labelText: "Select Position",
                         border: OutlineInputBorder(
@@ -150,31 +145,61 @@ class _SignInPageState extends State<SignInPage> {
                     ),
 
                     const SizedBox(height: 20),
+
+                    // PHONE FIELD (Only 10 digits)
                     TextFormField(
                       controller: phoneController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       decoration: InputDecoration(
                         labelText: "Enter Phone Number",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: const Icon(Icons.person, color: Colors.blueAccent),
+                        prefixIcon: const Icon(Icons.phone, color: Colors.blueAccent),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Enter your phone number' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Enter your phone number';
+                        } else if (value.length != 10) {
+                          return 'Phone number must be 10 digits';
+                        }
+                        return null;
+                      },
                     ),
+
                     const SizedBox(height: 20),
+
+                    // PASSWORD FIELD (with Eye icon)
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: "Enter Password",
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         prefixIcon: const Icon(Icons.lock, color: Colors.blueAccent),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.blueAccent,
+                          ),
+                          onPressed: () {
+                            setState(() => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Please enter your password' : null,
+                      validator: (value) =>
+                      value == null || value.isEmpty ? 'Please enter your password' : null,
                     ),
+
                     const SizedBox(height: 30),
+
+                    // LOGIN BUTTON
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

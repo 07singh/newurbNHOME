@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/Model/associate_profile_model.dart';
 import '/service/associate_profile_service.dart';
 import '/service/associateProfileChangeService.dart';
@@ -22,6 +23,13 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   String? _profileImageUrl;
   File? _selectedImage;
   bool _isUploading = false;
+
+  static const TextStyle _phoneTextStyle = TextStyle(
+    fontWeight: FontWeight.w600,
+    color: Colors.blue,
+    fontSize: 15,
+  );
+  static const double _avatarRadius = 65;
 
   @override
   void initState() {
@@ -93,8 +101,8 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 800,
-        maxHeight: 800,
+        maxWidth: 850,
+        maxHeight: 850,
         imageQuality: 85,
       );
 
@@ -153,7 +161,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           "Associate Profile",
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            fontSize: 18,
+            fontSize: 22,
           ),
         ),
         centerTitle: true,
@@ -269,25 +277,14 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
 
         // Profile Info
         Positioned(
-          top: height * 0.15 - 60,
+          top: height * 0.15 - (_avatarRadius + 10),
           left: 0,
           right: 0,
           child: Column(
             children: [
               // Profile Avatar
               _buildProfileAvatar(),
-              const SizedBox(height: 12),
-
-              // Name
-              Text(
-                profile.fullName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 16),
 
               // Associate ID
               Text(
@@ -322,7 +319,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
               ],
             ),
             child: CircleAvatar(
-              radius: 50,
+              radius: _avatarRadius,
               backgroundColor: Colors.grey.shade200,
               backgroundImage: _getProfileImage(),
               child: _isUploading
@@ -465,18 +462,71 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           ),
           Expanded(
             flex: 3,
-            child: Text(
-              value ?? '-',
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 15,
-              ),
-            ),
+            child: _isPhoneLabel(label) && value != null && value.isNotEmpty
+                ? _buildPhoneText(value, TextAlign.right)
+                : Text(
+                    value ?? '-',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 15,
+                    ),
+                  ),
           ),
         ],
       ),
     );
+  }
+
+  bool _isPhoneLabel(String label) {
+    return label.toLowerCase().contains('phone') || 
+           label.toLowerCase().contains('contact');
+  }
+
+  Widget _buildPhoneText(String phone, TextAlign align) {
+    final trimmedPhone = phone.trim();
+    if (trimmedPhone.isEmpty) {
+      return Text(
+        phone,
+        textAlign: align,
+        style: const TextStyle(
+          color: Colors.black54,
+          fontSize: 15,
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: () => _callPhoneNumber(trimmedPhone),
+      child: Text(
+        trimmedPhone,
+        textAlign: align,
+        style: _phoneTextStyle,
+      ),
+    );
+  }
+
+  Future<void> _callPhoneNumber(String phone) async {
+    final sanitizedPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (sanitizedPhone.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone number not available'),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri(scheme: 'tel', path: sanitizedPhone);
+    final launched = await launchUrl(uri);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to initiate call to $phone'),
+        ),
+      );
+    }
   }
 
   Widget _divider() {

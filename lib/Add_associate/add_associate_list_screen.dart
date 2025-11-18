@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '/Model/associate_model.dart'; // ✅ Only one model
+import 'package:url_launcher/url_launcher.dart'; // ✅ For call functionality
+import '/Model/associate_model.dart';
 import '/service/associate_list_service.dart';
-import'/DirectLogin/DirectLoginPage.dart';
+import '/DirectLogin/DirectLoginPage.dart';
 
 class AssociateListScreen extends StatefulWidget {
   const AssociateListScreen({super.key});
@@ -18,35 +19,41 @@ class _AssociateListScreenState extends State<AssociateListScreen> {
   void initState() {
     super.initState();
     _futureAssociates = _service.fetchAssociates().then((list) {
-      list = list.reversed.toList(); // 🔄 Latest upar dikhega
+      list = list.reversed.toList(); // Latest at top
       return list;
     });
+  }
+
+  // ✅ Function to launch phone dialer
+  void _makeCall(String phoneNumber) async {
+    final Uri url = Uri(scheme: 'tel', path: phoneNumber);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot launch phone dialer')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow, // ✅ Yellow background
+        backgroundColor: Colors.yellow,
         title: const Text(
           'Associates',
           style: TextStyle(
-            color: Colors.black, // ✅ Black text color
+            color: Colors.black,
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.black, // ✅ Black back icon
-          ),
-          onPressed: () {
-            Navigator.pop(context); // ✅ Only pop, no pushReplacement
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-
       body: FutureBuilder<List<Associate>>(
         future: _futureAssociates,
         builder: (context, snapshot) {
@@ -74,7 +81,15 @@ class _AssociateListScreenState extends State<AssociateListScreen> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Phone: ${associate.phone}'),
+                        Row(
+                          children: [
+                            Expanded(child: Text('Phone: ${associate.phone}')),
+                            IconButton(
+                              icon: const Icon(Icons.call, color: Colors.green),
+                              onPressed: () => _makeCall(associate.phone),
+                            ),
+                          ],
+                        ),
                         Text('Email: ${associate.email}'),
                       ],
                     ),

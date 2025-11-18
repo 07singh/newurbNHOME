@@ -56,18 +56,22 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   };
 
   String? _selectedState;
-  String? _selectedProject;
 
+  // Multi-project selection
   final List<String> _projects = [
     "Defence Phase 2",
     "Green Residency Phase 2",
   ];
+  List<String> _selectedProjects = [];
+
+  // Commission controller for each project
+  final Map<String, TextEditingController> _commissionControllers = {};
 
   final List<String> _indianStates = [
     'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat',
     'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala',
     'Madhya Pradesh', 'Maharashtra', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim',
-    'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+    'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal','Jammu& kashmir'
   ];
 
   Future<void> _pickImage(String key) async {
@@ -111,6 +115,14 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_selectedProjects.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select at least one project")),
+      );
+      return;
+    }
+
+    // Check all file uploads
     for (var key in _base64.keys) {
       if (_base64[key] == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -120,11 +132,26 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       }
     }
 
+    // Check commissions for selected projects
+    for (var project in _selectedProjects) {
+      if (_commissionControllers[project] == null || _commissionControllers[project]!.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please enter commission for $project")),
+        );
+        return;
+      }
+    }
+
+    // Prepare submission data
+    final Map<String, String> projectCommissions = {
+      for (var project in _selectedProjects) project: _commissionControllers[project]!.text
+    };
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Success"),
-        content: const Text("Form Submitted (no API used)."),
+        content: Text("Form Submitted for projects:\n${projectCommissions.entries.map((e) => "${e.key}: Rs ${e.value}").join("\n")}"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -144,7 +171,6 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         backgroundColor: const Color(0xFFFFD700),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Card(
@@ -158,9 +184,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
                 children: [
                   _profilePicField(),
                   const SizedBox(height: 20),
-
                   ..._inputFields(),
-
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _submit,
@@ -185,7 +209,6 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       _textField("Phone", "Enter phone number"),
       _textField("Email", "Enter email"),
       _textField("CurrentAddress", "Enter address"),
-
       Row(
         children: [
           Checkbox(
@@ -205,9 +228,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
           const Text("Same as Current Address"),
         ],
       ),
-
       _textField("PermanentAddress", "Enter address"),
-
       DropdownButtonFormField<String>(
         decoration: InputDecoration(
           labelText: "State",
@@ -220,9 +241,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         onChanged: (val) => setState(() => _selectedState = val),
         validator: (v) => v == null ? "Please select state" : null,
       ),
-
       const SizedBox(height: 14),
-
       _textField("City", "Enter city"),
       _textField("Pincode", "Enter pincode"),
       _textField("AadhaarNo", "Enter Aadhaar"),
@@ -230,31 +249,70 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       _fileField("AadhaarBackPic", label: "Upload Aadhaar Back"),
       _textField("PanNo", "Enter PAN"),
       _fileField("PanPic", label: "Upload PAN Card"),
-
-      // ✔ Replaced textfield → dropdown for project
-      DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: "Project Name",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        value: _selectedProject,
-        items: _projects
-            .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-            .toList(),
-        onChanged: (val) {
-          setState(() {
-            _selectedProject = val!;
-            _controllers["ProjectName"]!.text = val;
-          });
-        },
-        validator: (v) => v == null ? "Please select project" : null,
-      ),
-
+      const SizedBox(height: 10),
+      _projectsField(), // Projects + per-project commissions
       const SizedBox(height: 14),
-
-      _textField("Commission", "Enter commission (Rs)"),
       _textField("Password", "Enter password", obscure: true),
     ];
+  }
+
+  Widget _projectsField() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Select Projects", style: TextStyle(fontWeight: FontWeight.bold)),
+          ..._projects.map((project) {
+            // Ensure controller exists
+            _commissionControllers.putIfAbsent(project, () => TextEditingController());
+
+            return Column(
+              children: [
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(project),
+                  value: _selectedProjects.contains(project),
+                  onChanged: (bool? val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedProjects.add(project);
+                      } else {
+                        _selectedProjects.remove(project);
+                        _commissionControllers[project]!.clear();
+                      }
+                    });
+                  },
+                ),
+                if (_selectedProjects.contains(project))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: TextFormField(
+                      controller: _commissionControllers[project],
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: "Commission for $project (Rs)",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      validator: (v) {
+                        if (_selectedProjects.contains(project) && (v == null || v.isEmpty)) {
+                          return "Enter commission for $project";
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
   }
 
   Widget _fileField(String key, {required String label}) {

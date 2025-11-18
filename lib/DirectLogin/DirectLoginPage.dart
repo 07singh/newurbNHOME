@@ -49,6 +49,7 @@ class _DirectloginPageState extends State<DirectloginPage>
   Staff? _profile;
   bool _isLoadingProfile = true;
   String? _profileError;
+  String? _userPhone;
   
   // Services
   final StaffProfileService _profileService = StaffProfileService();
@@ -88,6 +89,12 @@ class _DirectloginPageState extends State<DirectloginPage>
         });
         return;
       }
+
+      if (mounted) {
+        setState(() {
+          _userPhone = phone;
+        });
+      }
       
       print('🌐 Loading Director profile: Phone=$phone, Position=$position');
       
@@ -102,6 +109,7 @@ class _DirectloginPageState extends State<DirectloginPage>
           _profile = response.staff;
           _isLoadingProfile = false;
           _profileError = null;
+          _userPhone = _profile?.phone ?? phone;
         });
         
         print('✅ Profile loaded: ${_profile!.fullName}');
@@ -285,7 +293,7 @@ class _DirectloginPageState extends State<DirectloginPage>
               _buildDrawerItem(
                 icon: Icons.today_rounded,
                 title: "setting",
-                onTap: () => _navigateTo(const ChangePasswordScreen()),
+                onTap: () => _openChangePassword(userRole),
               ),
             ],
             if (userRole == "Associate") ...[
@@ -453,6 +461,30 @@ class _DirectloginPageState extends State<DirectloginPage>
   void _navigateTo(Widget page) {
     Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
+
+  void _openChangePassword(String userRole) {
+    final phone = _profile?.phone ?? _userPhone;
+    if (phone == null || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone number not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangePasswordScreen(
+          phone: phone,
+          position: userRole,
+        ),
+      ),
+    );
   }
 
   // ------------------ WELCOME ------------------

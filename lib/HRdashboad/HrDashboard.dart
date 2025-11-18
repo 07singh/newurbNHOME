@@ -42,11 +42,13 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final storage = const FlutterSecureStorage();
+  String? _userPhone;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadUserPhone();
   }
 
   @override
@@ -64,10 +66,37 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
       setState(() {});
     }
   }
+  Future<void> _loadUserPhone() async {
+    String? phone = await storage.read(key: 'user_mobile');
+    if (phone == null || phone.isEmpty) {
+      final session = await AuthManager.getCurrentSession();
+      phone = session?.userMobile ?? session?.phone;
+    }
+    if (!mounted) return;
+    setState(() {
+      _userPhone = phone;
+    });
+  }
+
   void _navigateToChangePasswordScreen() {
+    if (_userPhone == null || _userPhone!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone number not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
+      MaterialPageRoute(
+        builder: (context) => ChangePasswordScreen(
+          phone: _userPhone!,
+          position: widget.userRole,
+        ),
+      ),
     );
   }
 

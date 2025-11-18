@@ -111,6 +111,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openChangePassword() {
+    if (_userPhone == null || _userPhone!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone number not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChangePasswordScreen(
+          phone: _userPhone!,
+          position: _userRole ?? 'Employee',
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _timer.cancel();
@@ -193,14 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.settings, color: Colors.blue),
               title: const Text('setting', style: TextStyle(fontWeight: FontWeight.w500)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ChangePasswordScreen ()),
-                );
-              },
-
-
+              onTap: _openChangePassword,
             ),
             ListTile(
               leading: const Icon(Icons.fact_check, color: Colors.green),

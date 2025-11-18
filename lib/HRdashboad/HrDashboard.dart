@@ -19,6 +19,7 @@ import '/Employ.dart';
 import 'HrAddNotifation.dart';
 import 'LeavePage.dart';
 import 'PaymentHistoryScreen.dart';
+import'/changepassword.dart';
 
 class HRDashboardPage extends StatefulWidget {
   final String userName;
@@ -62,6 +63,12 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     if (result != null && result is Map<String, String>) {
       setState(() {});
     }
+  }
+  void _navigateToChangePasswordScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
+    );
   }
 
   @override
@@ -270,7 +277,15 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
             ),
 
             _buildDrawerSectionHeader("SETTINGS"),
-            _buildDrawerItem(icon: Icons.settings_rounded, title: "Settings", onTap: () {}),
+            _buildDrawerItem(
+              icon: Icons.settings_rounded,
+              title: "Settings",
+              onTap: () {
+                Navigator.pop(context);  // Drawer close
+                _navigateToChangePasswordScreen(); // Navigate to screen
+              },
+            ),
+
             _buildDrawerItem(
               icon: Icons.person_rounded,
               title: "My Profile",

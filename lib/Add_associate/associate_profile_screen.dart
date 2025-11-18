@@ -52,7 +52,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   Future<void> _refresh() async {
     setState(() {
       _futureProfile = _loadProfile();
-      _selectedImage = null; // Reset selected image after refresh
+      _selectedImage = null;
     });
   }
 
@@ -123,10 +123,10 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
       if (response.status == "Success") {
         setState(() {
           _selectedImage = image;
-          _profileImageUrl = null; // Force refresh from server
+          _profileImageUrl = null;
         });
         _showSnackBar(response.message);
-        await _refresh(); // Refresh profile data
+        await _refresh();
       } else {
         _showSnackBar("Failed: ${response.message}");
       }
@@ -236,20 +236,13 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              // Header with Profile
               _buildProfileHeader(profile, height),
-
               const SizedBox(height: 70),
-
-              // Details Card
               _buildDetailsCard(profile),
-
               const SizedBox(height: 20),
             ],
           ),
         ),
-
-        // Uploading Overlay
         if (_isUploading) _buildUploadingOverlay(),
       ],
     );
@@ -259,7 +252,6 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Background
         Container(
           height: height * 0.15,
           width: double.infinity,
@@ -274,19 +266,14 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
             ],
           ),
         ),
-
-        // Profile Info
         Positioned(
           top: height * 0.15 - (_avatarRadius + 10),
           left: 0,
           right: 0,
           child: Column(
             children: [
-              // Profile Avatar
               _buildProfileAvatar(),
               const SizedBox(height: 16),
-
-              // Associate ID
               Text(
                 "ID: ${profile.associateId}",
                 style: const TextStyle(
@@ -301,51 +288,55 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
     );
   }
 
+  /// ===========================
+  /// UPDATED AVATAR (ONLY CAMERA ICON CLICKABLE)
+  /// ===========================
   Widget _buildProfileAvatar() {
-    return GestureDetector(
-      onTap: _isUploading ? null : _showImageSourceDialog,
-      child: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: _avatarRadius,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: _getProfileImage(),
-              child: _isUploading
-                  ? Container(
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                  ),
-                ),
-              )
-                  : null,
-            ),
+    return Stack(
+      children: [
+        // Profile Avatar (NOT clickable)
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
+          child: CircleAvatar(
+            radius: _avatarRadius,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: _getProfileImage(),
+            child: _isUploading
+                ? Container(
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+            )
+                : null,
+          ),
+        ),
 
-          // Edit Icon
-          if (!_isUploading)
-            Positioned(
-              bottom: 0,
-              right: 0,
+        // Camera Icon (ONLY clickable area)
+        if (!_isUploading)
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: _showImageSourceDialog, // Only camera icon opens dialog
               child: Container(
-                height: 36,
-                width: 36,
+                height: 40,
+                width: 40,
                 decoration: BoxDecoration(
                   color: Colors.deepPurple,
                   shape: BoxShape.circle,
@@ -361,14 +352,15 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
                 child: const Icon(
                   Icons.camera_alt,
                   color: Colors.white,
-                  size: 18,
+                  size: 20,
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
+
 
   Widget _buildDetailsCard(AssociateProfile profile) {
     final infoItems = [
@@ -438,11 +430,10 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
     } else if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
       return NetworkImage(_profileImageUrl!);
     } else {
-      return const AssetImage('assets/user.png') as ImageProvider;
+      return const AssetImage('assets/user.png');
     }
   }
 
-  // ===== Helper Widgets =====
   Widget _buildInfoRow(String label, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -465,13 +456,13 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
             child: _isPhoneLabel(label) && value != null && value.isNotEmpty
                 ? _buildPhoneText(value, TextAlign.right)
                 : Text(
-                    value ?? '-',
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 15,
-                    ),
-                  ),
+              value ?? '-',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 15,
+              ),
+            ),
           ),
         ],
       ),
@@ -479,8 +470,8 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   }
 
   bool _isPhoneLabel(String label) {
-    return label.toLowerCase().contains('phone') || 
-           label.toLowerCase().contains('contact');
+    return label.toLowerCase().contains('phone') ||
+        label.toLowerCase().contains('contact');
   }
 
   Widget _buildPhoneText(String phone, TextAlign align) {

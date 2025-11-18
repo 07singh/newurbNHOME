@@ -11,8 +11,8 @@ class StaffProfileResponse {
 
   factory StaffProfileResponse.fromJson(Map<String, dynamic> json) {
     return StaffProfileResponse(
-      message: json['message'] ?? '',
-      status: json['status'] ?? '',
+      message: json['Message'] ?? '',   // FIXED (capital M)
+      status: json['Status'] ?? '',     // FIXED (capital S)
       staff: json['staff'] != null ? Staff.fromJson(json['staff']) : null,
     );
   }
@@ -67,7 +67,7 @@ class Staff {
     );
   }
 
-  /// Returns full image URL with domain if available
+  /// Returns full image URL with domain
   String get fullProfilePicUrl {
     if (profilePicUrl == null || profilePicUrl!.isEmpty) {
       return "https://realapp.cheenu.in/Uploads/default.png";

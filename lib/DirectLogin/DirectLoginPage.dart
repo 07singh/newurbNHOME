@@ -22,6 +22,7 @@ import '/service/attendance_manager.dart';
 import '/service/profile_service.dart';
 import '/Model/profile_model.dart';
 import '/EmployeeDashboard/attendanceHistory.dart';
+import'/changepassword.dart';
 
 class DirectloginPage extends StatefulWidget {
   final String? userName; // ✅ Added
@@ -280,6 +281,11 @@ class _DirectloginPageState extends State<DirectloginPage>
                 icon: Icons.today_rounded,
                 title: "Add visitor list",
                 onTap: () => _navigateTo(const VisitorListScreen ()),
+              ),
+              _buildDrawerItem(
+                icon: Icons.today_rounded,
+                title: "setting",
+                onTap: () => _navigateTo(const ChangePasswordScreen()),
               ),
             ],
             if (userRole == "Associate") ...[

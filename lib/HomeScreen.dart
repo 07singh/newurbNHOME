@@ -16,6 +16,7 @@ import'/DirectLogin/addVisitorlistforem.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/Employ.dart';
+import'/changepassword.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userName;
@@ -187,6 +188,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
 
+
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings, color: Colors.blue),
+              title: const Text('setting', style: TextStyle(fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ChangePasswordScreen ()),
+                );
+              },
+
+
             ),
             ListTile(
               leading: const Icon(Icons.fact_check, color: Colors.green),
@@ -229,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 await AttendanceManager.clearCheckIn();
                 // Also clear secure storage for backward compatibility
                 await _storage.deleteAll();
-                
+
                 // Navigate to role selection screen
                 Navigator.pushAndRemoveUntil(
                   context,

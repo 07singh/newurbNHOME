@@ -5,11 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import '/Model/profile_model.dart';
 import '/service/profile_service.dart';
 
-class ProfileScreenhr  extends StatefulWidget {
+class ProfileScreenhr extends StatefulWidget {
   final String? phone;
   final String? position;
 
-  const ProfileScreenhr ({super.key, this.phone, this.position});
+  const ProfileScreenhr({super.key, this.phone, this.position});
 
   @override
   State<ProfileScreenhr> createState() => _ProfileScreenhrState();
@@ -18,10 +18,14 @@ class ProfileScreenhr  extends StatefulWidget {
 class _ProfileScreenhrState extends State<ProfileScreenhr> {
   final _storage = const FlutterSecureStorage();
   final StaffProfileService _service = StaffProfileService();
+
   late Future<StaffProfileResponse> _futureProfile;
 
   String? _profileImageUrl;
-  String? _localImagePath;
+  File? _pickedImage;
+
+  String? _savedPhone;
+  String? _savedPosition;
 
   @override
   void initState() {
@@ -29,24 +33,103 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
     _futureProfile = _loadProfile();
   }
 
+  // ===================== LOAD PROFILE =====================
   Future<StaffProfileResponse> _loadProfile() async {
-    final phone = widget.phone ?? await _storage.read(key: 'user_mobile') ?? '';
-    final position = widget.position ?? await _storage.read(key: 'user_role') ?? '';
+    _savedPhone = widget.phone ?? await _storage.read(key: 'user_mobile') ?? '';
+    _savedPosition = widget.position ?? await _storage.read(key: 'user_role') ?? '';
 
-    if (phone.isEmpty) throw Exception('Phone number not available');
-    final response = await _service.fetchProfile(phone: phone, position: position);
-    if (response.staff != null) {
-      _profileImageUrl = response.staff!.fullProfilePicUrl;
+    if (_savedPhone!.isEmpty) {
+      throw Exception("Phone not found in storage");
     }
+
+    final response = await _service.fetchProfile(
+      phone: _savedPhone!,
+      position: _savedPosition!,
+    );
+
+    _profileImageUrl = response.staff?.fullProfilePicUrl;
+
     return response;
   }
 
-  Future<void> _refresh() async => setState(() => _futureProfile = _loadProfile());
+  Future<void> _refresh() async {
+    setState(() => _futureProfile = _loadProfile());
+  }
 
-  Future<void> _changePicture() async {
+  // ===================== PICKER BOTTOM SHEET =====================
+  void _openPickerDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Camera"),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text("Gallery"),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ===================== PICK IMAGE =====================
+  Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) setState(() => _localImagePath = image.path);
+    final file = await picker.pickImage(source: source);
+
+    if (file != null) {
+      setState(() => _pickedImage = File(file.path));
+    }
+  }
+
+  // ===================== UPLOAD PROFILE PIC =====================
+  Future<void> _uploadProfilePic() async {
+    if (_pickedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an image")),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Uploading...")),
+    );
+
+    final uploaded = await _service.updateProfilePicture(
+      phone: _savedPhone!,
+      position: _savedPosition!,
+      file: _pickedImage,
+    );
+
+    if (uploaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile Updated Successfully")),
+      );
+
+      setState(() {
+        _pickedImage = null;
+        _futureProfile = _loadProfile();
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Upload Failed")),
+      );
+    }
   }
 
   @override
@@ -55,6 +138,20 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.blueAccent,
+        foregroundColor: Colors.black,
+        centerTitle: true,
+        title: const Text(
+          "Profile Details",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600,
+            fontSize: 22,
+          ),
+        ),
+      ),
+
       body: FutureBuilder<StaffProfileResponse>(
         future: _futureProfile,
         builder: (context, snapshot) {
@@ -67,126 +164,94 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.deepPurple)),
-                  const SizedBox(height: 12),
-                  ElevatedButton(onPressed: _refresh, child: const Text('Retry')),
+                  Text('Error: ${snapshot.error}'),
+                  ElevatedButton(
+                    onPressed: _refresh,
+                    child: const Text('Retry'),
+                  ),
                 ],
               ),
             );
           }
 
-          final staff = snapshot.data?.staff;
-          if (staff == null) {
-            return const Center(child: Text('No profile data found'));
-          }
+          final staff = snapshot.data!.staff!;
 
           return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
-                // ===== Header =====
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      height: h * 0.22,
-                      width: double.infinity,
-                      color: Colors.blue,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                              const Text(
-                                "Profile Details",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 48),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                Container(
+                  height: h * 0.15,
+                  color: Colors.blueAccent,
+                ),
 
-                    // ===== Profile Picture =====
-                    Positioned(
-                      bottom: -75,
-                      left: 0,
-                      right: 0,
-                      child: Column(
+                Transform.translate(
+                  offset: const Offset(0, -60),
+                  child: Column(
+                    children: [
+                      Stack(
                         children: [
-                          GestureDetector(
-                            onTap: _changePicture,
-                            child: CircleAvatar(
-                              radius: 55,
-                              backgroundColor: Colors.white,
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundImage: _localImagePath != null
-                                    ? FileImage(File(_localImagePath!))
-                                    : (_profileImageUrl != null
-                                    ? NetworkImage(_profileImageUrl!)
-                                    : const AssetImage('assets/profile_placeholder.png'))
-                                as ImageProvider,
-                              ),
-                            ),
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundImage: _pickedImage != null
+                                ? FileImage(_pickedImage!)
+                                : NetworkImage(_profileImageUrl!) as ImageProvider,
                           ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: _changePicture,
-                            child: const Text(
-                              "Change Picture",
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
+
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: _openPickerDialog,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.black,
+                                ),
+                                child: const Icon(Icons.camera_alt,
+                                    size: 20, color: Colors.white),
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 10),
+
+                      if (_pickedImage != null)
+                        ElevatedButton(
+                          onPressed: _uploadProfilePic,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text("Update Picture"),
+                        )
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: 80),
-
-                // ===== Card Section =====
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Card(
-                    elevation: 3,
+                    elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                        borderRadius: BorderRadius.circular(14)),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          _buildInfoRow('Full Name', staff.fullName),
+                          _buildInfoRow("Full Name", staff.fullName),
                           _divider(),
-                          _buildInfoRow('Phone', staff.phone),
+                          _buildInfoRow("Phone", staff.phone),
                           _divider(),
-                          _buildInfoRow('Email', staff.email),
+                          _buildInfoRow("Email", staff.email),
                           _divider(),
-                          _buildInfoRow('Position', staff.position),
+                          _buildInfoRow("Position", staff.position),
                           _divider(),
-                          _buildInfoRow(
-                            'Status',
-                            staff.status ? 'Active' : 'Inactive',
-                          ),
+                          _buildInfoRow("Status", staff.status ? "Active" : "Inactive"),
                           _divider(),
-                          _buildInfoRow('Staff ID', staff.staffId.toString()),
+                          _buildInfoRow("Staff ID", staff.staffId),
                         ],
                       ),
                     ),
@@ -200,29 +265,20 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
     );
   }
 
-  // ===== Helper Widgets =====
   Widget _buildInfoRow(String label, String? value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w500)),
           Flexible(
             child: Text(
               value ?? '-',
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 15,
-              ),
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 15, color: Colors.black54),
             ),
           ),
         ],
@@ -230,11 +286,5 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
     );
   }
 
-  Widget _divider() {
-    return const Divider(
-      color: Colors.grey,
-      thickness: 0.3,
-      height: 4,
-    );
-  }
+  Widget _divider() => const Divider(thickness: 0.3);
 }

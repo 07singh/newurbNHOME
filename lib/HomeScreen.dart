@@ -16,7 +16,7 @@ import'/DirectLogin/addVisitorlistforem.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/Employ.dart';
-import'/changepassword.dart';
+import'/ChangePasswordScreenem.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? userName;
@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openChangePassword() {
+  void _openChangePasswordScreenem() {
     if (_userPhone == null || _userPhone!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChangePasswordScreen(
+        builder: (context) => ChangePasswordScreenem(
           phone: _userPhone!,
           position: _userRole ?? 'Employee',
         ),
@@ -215,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.settings, color: Colors.blue),
               title: const Text('setting', style: TextStyle(fontWeight: FontWeight.w500)),
-              onTap: _openChangePassword,
+              onTap: _openChangePasswordScreenem,
             ),
             ListTile(
               leading: const Icon(Icons.fact_check, color: Colors.green),

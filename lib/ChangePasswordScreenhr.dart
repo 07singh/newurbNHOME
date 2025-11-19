@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 import '/service/ChangePasswordService.dart';
 import '/Model/ChangePasswordResponse.dart';
 
-class ChangePasswordScreen extends StatefulWidget {
+class ChangePasswordScreenhr extends StatefulWidget {
   final String phone;
   final String position;
 
-  const ChangePasswordScreen({
+  const ChangePasswordScreenhr({
     super.key,
     required this.phone,
     required this.position,
   });
 
   @override
-  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  State<ChangePasswordScreenhr> createState() => _ChangePasswordScreenhrState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ChangePasswordScreenhrState extends State<ChangePasswordScreenhr> {
   final _formKey = GlobalKey<FormState>();
   final oldPassCtrl = TextEditingController();
   final newPassCtrl = TextEditingController();
@@ -43,7 +43,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("New password cannot be same as old password!"),
-          backgroundColor: Color(0xFFFFD700),
+          backgroundColor: Colors.blue,
         ),
       );
       return;
@@ -130,7 +130,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFFFD700),
+                            color: Colors.blue,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -192,7 +192,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           child: ElevatedButton(
                             onPressed: loading ? null : submitChangePassword,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFFD700),
+                              backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
                               elevation: 3,
                               shape: RoundedRectangleBorder(
@@ -241,7 +241,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       "Password Tips",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFFFD700),
+                        color: Colors.blue,
                         fontSize: 15,
                       ),
                     ),
@@ -277,7 +277,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           },
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFFFFD700)),
+        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Colors.blue),
         suffixIcon: IconButton(
           icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
           onPressed: onToggle,
@@ -294,7 +294,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFFFD700), width: 2),
+          borderSide: const BorderSide(color: Colors.blue, width: 2),
         ),
       ),
     );
@@ -305,7 +305,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle, size: 18, color: Color(0xFFFFD700)),
+          Icon(Icons.check_circle, size: 18, color: Colors.blue),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

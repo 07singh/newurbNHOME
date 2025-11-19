@@ -19,7 +19,7 @@ import '/Employ.dart';
 import 'HrAddNotifation.dart';
 import 'LeavePage.dart';
 import 'PaymentHistoryScreen.dart';
-import'/changepassword.dart';
+import'/ChangePasswordScreenhr.dart';
 
 class HRDashboardPage extends StatefulWidget {
   final String userName;
@@ -78,7 +78,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     });
   }
 
-  void _navigateToChangePasswordScreen() {
+  void _navigateToChangePasswordScreenhr() {
     if (_userPhone == null || _userPhone!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -92,7 +92,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ChangePasswordScreen(
+        builder: (context) => ChangePasswordScreenhr(
           phone: _userPhone!,
           position: widget.userRole,
         ),
@@ -311,7 +311,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               title: "Settings",
               onTap: () {
                 Navigator.pop(context);  // Drawer close
-                _navigateToChangePasswordScreen(); // Navigate to screen
+                _navigateToChangePasswordScreenhr(); // Navigate to screen
               },
             ),
 

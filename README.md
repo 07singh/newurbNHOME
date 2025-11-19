@@ -56,16 +56,20 @@ A complete Flutter-based multi-role real estate management system.
 ## 📸 App Screenshots
 
 ### 🔹 1. Associate Dashboard
-![Associate Dashboard](./assets/images/1.jpg)
+
+![Associate Dashboard](assets/1.jpg)
 
 ### 🔹 2. HR Dashboard
-![HR Dashboard](./assets/images/2.jpg)
+
+![HR Dashboard](assets/2.jpg)
 
 ### 🔹 3. Colony Plot Layout (Interactive Map)
-![Plot Layout](./assets/images/3.jpg)
+
+![Plot Layout](assets/3.jpg)
 
 ### 🔹 4. Director Dashboard
-![Director Dashboard](./assets/images/4.jpg)
+
+![Director Dashboard](assets/4.jpg)
 
 ---
 

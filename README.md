@@ -45,8 +45,8 @@ A complete Flutter-based multi-role real estate management system.
 | Component | Technology |
 |----------|------------|
 | Framework | Flutter |
-| State Management | Provider / GetX |
-| API Handling | Dio + Interceptors + Token Auth |
+| State Management | Provider |
+| API Handling | http  |
 | Backend | .NET Core |
 | Database | SQL Server |
 | Architecture | Clean + MVVM |

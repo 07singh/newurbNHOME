@@ -1,5 +1,5 @@
 # 🏡 New Urban Homes – Real Estate & Plot Booking Mobile App  
-A complete Flutter-based multi-role real estate management system.
+New Urban Home is a complete real-estate management application built using Flutter, designed to handle plots, bookings, HR operations, associates, payments, and dashboards with real-time updates. It integrates secure REST APIs and follows MVVM architecture for clean and scalable development.
 
 ---
 

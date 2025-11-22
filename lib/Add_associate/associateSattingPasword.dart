@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import '/service/associateForgetPassword_service.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
-  const ChangePasswordScreen({super.key});
+  final String phone;
+  const ChangePasswordScreen({super.key, required this.phone});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(context),
-      body: const _ChangePasswordForm(),
+      body: _ChangePasswordForm(phone: phone),
     );
   }
 
@@ -35,7 +36,8 @@ class ChangePasswordScreen extends StatelessWidget {
 }
 
 class _ChangePasswordForm extends StatefulWidget {
-  const _ChangePasswordForm();
+  final String phone;
+  const _ChangePasswordForm({required this.phone});
 
   @override
   State<_ChangePasswordForm> createState() => _ChangePasswordFormState();
@@ -79,6 +81,7 @@ class _ChangePasswordFormState extends State<_ChangePasswordForm> {
 
     try {
       final response = await ChangePasswordService.changePassword(
+        phone: widget.phone,
         oldPassword: _oldPasswordController.text.trim(),
         newPassword: _newPasswordController.text.trim(),
         confirmPassword: _confirmPasswordController.text.trim(),

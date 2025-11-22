@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../DirectLogin/add_staff_hr.dart';
+import '../DirectLogin/add_staff_listhr.dart';
 import '../EmployeeDashboard/historyforHr.dart';
+import '../emoloyee_file/bookingRequestForHr.dart';
 import '../emoloyee_file/profile_screenforhr.dart';
 import '/emoloyee_file/profile_screen.dart';
 import '/emoloyee_file/booking_request.dart';
@@ -15,11 +18,17 @@ import'/DirectLogin/add_staff_screen.dart';
 import'/DirectLogin/add_staff.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
+import '/service/profile_service.dart';
+import '/Model/profile_model.dart';
+import '/screens/banner_management_screen.dart';
 import '/Employ.dart';
 import 'HrAddNotifation.dart';
 import 'LeavePage.dart';
 import 'PaymentHistoryScreen.dart';
 import'/ChangePasswordScreenhr.dart';
+import '/DirectLogin/add_day_bookhr.dart';
+import '/DirectLogin/add_day_history_screenhr.dart';
+import '/DirectLogin/add_detail_screenhr.dart';
 
 class HRDashboardPage extends StatefulWidget {
   final String userName;
@@ -42,13 +51,16 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final storage = const FlutterSecureStorage();
+  final StaffProfileService _profileService = StaffProfileService();
   String? _userPhone;
+  String? _profileImageUrl;
+  bool _isLoadingProfile = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadUserPhone();
+    _loadUserPhone(); // This will also trigger _loadProfileImage()
   }
 
   @override
@@ -57,13 +69,54 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     super.dispose();
   }
 
+  Future<void> _loadProfileImage() async {
+    try {
+      String? phone = _userPhone ?? await storage.read(key: 'user_mobile');
+      if (phone == null || phone.isEmpty) {
+        final session = await AuthManager.getCurrentSession();
+        phone = session?.userMobile ?? session?.phone;
+      }
+      
+      if (phone != null && phone.isNotEmpty) {
+        final response = await _profileService.fetchProfile(
+          phone: phone,
+          position: widget.userRole,
+        );
+        
+        if (response.staff != null && mounted) {
+          setState(() {
+            _profileImageUrl = response.staff!.fullProfilePicUrl;
+            _isLoadingProfile = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingProfile = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+      setState(() {
+        _isLoadingProfile = false;
+      });
+    }
+  }
+
   Future<void> _navigateToProfile() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) =>   ProfileScreenhr ()),
     );
     if (result != null && result is Map<String, String>) {
-      setState(() {});
+      // Reload profile image when returning from profile screen
+      _loadProfileImage();
+    } else {
+      // Even if no result, reload to get updated image
+      _loadProfileImage();
     }
   }
   Future<void> _loadUserPhone() async {
@@ -76,6 +129,10 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
     setState(() {
       _userPhone = phone;
     });
+    // Load profile image after phone is available
+    if (phone != null && phone.isNotEmpty) {
+      _loadProfileImage();
+    }
   }
 
   void _navigateToChangePasswordScreenhr() {
@@ -173,20 +230,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 20),
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      image: DecorationImage(
-                        image: (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty)
-                            ? NetworkImage(widget.profileImageUrl!) as ImageProvider
-                            : const AssetImage('assets/download (1).jpeg'), // Dummy if no URL
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+                  _buildProfileAvatar(80),
                   const SizedBox(height: 12),
                   Text(
                     widget.userName,
@@ -223,7 +267,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                     title: Text("Add Employee", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => AddStaffScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) =>  AddStaffScreenhr ()));
                     },
                   ),
                 ),
@@ -236,7 +280,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                     title: Text("View Employee", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => StaffListScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) =>  StaffListScreenhr ()));
                     },
                   ),
                 ),
@@ -285,7 +329,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                     title: Text("Booking Request", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => PendingRequestsScreen(userRole: widget.userRole)));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) =>PendingRequestsHrScreen(userRole: widget.userRole)));
                     },
                   ),
                 ),
@@ -321,6 +365,49 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               onTap: () {
                 Navigator.pop(context);
                 _navigateToProfile();
+              },
+            ),
+
+            _buildDrawerSectionHeader("BANNER MANAGEMENT"),
+            _buildDrawerItem(
+              icon: Icons.image_rounded,
+              title: "Banner Management",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BannerManagementScreen(),
+                  ),
+                );
+              },
+            ),
+
+            _buildDrawerSectionHeader("DAY BOOK"),
+            _buildDrawerItem(
+              icon: Icons.book_rounded,
+              title: "Add Day Book",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddDayBookScreenhr(),
+                  ),
+                );
+              },
+            ),
+            _buildDrawerItem(
+              icon: Icons.history_rounded,
+              title: "Day Book History",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DayBookHistoryScreenhr(),
+                  ),
+                );
               },
             ),
 
@@ -391,20 +478,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
             ),
           ),
           // Smart Profile Image in Dashboard
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              image: DecorationImage(
-                image: (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty)
-                    ? NetworkImage(widget.profileImageUrl!) as ImageProvider
-                    : const AssetImage('assets/download (1).jpeg'), // Dummy if no URL
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+          _buildProfileAvatar(80),
         ],
       ),
     );
@@ -495,7 +569,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        PendingRequestsScreen(userRole: widget.userRole),
+                        PendingRequestsHrScreen(userRole: widget.userRole),
                   ),
                 );
               },
@@ -579,7 +653,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               const SizedBox(width: 12),
 
               // UPDATED: 2 -> Staff List
-              _buildActionButton("Staff List", Icons.people_alt_rounded, Colors.green, StaffListScreen()),
+              _buildActionButton("Staff List", Icons.people_alt_rounded, Colors.green, StaffListScreenhr()),
               const SizedBox(width: 12),
 
               // UPDATED: 3 -> Leave Page
@@ -591,7 +665,10 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               const SizedBox(width: 12),
               _buildActionButton("Visitor list", Icons.analytics_rounded, Colors.red, VisitorListScreen ()),
               const SizedBox(width: 12),
-              _buildActionButton("staff List ", Icons.analytics_rounded, Colors.red, StaffListScreen()),
+              _buildActionButton("Add Day Book", Icons.book_rounded, Colors.teal, const AddDayBookScreenhr()),
+              const SizedBox(width: 12),
+              _buildActionButton("Day Book History", Icons.history_rounded, Colors.indigo, const DayBookHistoryScreenhr()),
+
             ],
           ),
         ),
@@ -719,6 +796,82 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
       context,
       MaterialPageRoute(builder: (context) => const HomePage()),
           (route) => false,
+    );
+  }
+
+  Widget _buildProfileAvatar(double size) {
+    if (_isLoadingProfile) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 3),
+          color: Colors.white.withOpacity(0.3),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+      ),
+      child: ClipOval(
+        child: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+            ? Image.network(
+                _profileImageUrl!,
+                fit: BoxFit.cover,
+                width: size,
+                height: size,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.white.withOpacity(0.3),
+                    child: const Icon(
+                      Icons.person,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.white.withOpacity(0.3),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              )
+            : Container(
+                color: Colors.white.withOpacity(0.3),
+                child: const Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Colors.white,
+                ),
+              ),
+      ),
     );
   }
 }

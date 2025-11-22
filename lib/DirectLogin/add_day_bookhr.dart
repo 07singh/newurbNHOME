@@ -6,14 +6,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '/service/auth_manager.dart';
 
-class AddDayBookScreen extends StatefulWidget {
-  const AddDayBookScreen({Key? key}) : super(key: key);
+class AddDayBookScreenhr extends StatefulWidget {
+  const AddDayBookScreenhr({Key? key}) : super(key: key);
 
   @override
-  State<AddDayBookScreen> createState() => _AddDayBookScreenState();
+  State<AddDayBookScreenhr> createState() => _AddDayBookScreenhrState();
 }
 
-class _AddDayBookScreenState extends State<AddDayBookScreen> {
+class _AddDayBookScreenhrState extends State<AddDayBookScreenhr> {
   final _formKey = GlobalKey<FormState>();
   DateTime _selectedDateTime = DateTime.now();
 
@@ -204,7 +204,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
           'Add Day Book Entry',
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: Colors.white,
           ),
         ),
         centerTitle: true,
@@ -213,7 +213,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFFFD700), Color(0xFFFFD700)],
+              colors: [Color(0xFF3371F4), Color(0xFF3371F4)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -305,10 +305,10 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                       items: _paymentModes
                           .map(
                             (mode) => DropdownMenuItem(
-                              value: mode,
-                              child: Text(mode),
-                            ),
-                          )
+                          value: mode,
+                          child: Text(mode),
+                        ),
+                      )
                           .toList(),
                       onChanged: (value) {
                         if (value == null) return;
@@ -381,7 +381,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
                             Icon(Icons.upload,
-                                size: 40, color: Color(0xFFFFD700)),
+                                size: 40, color: Color(0xFF3371F4)),
                             SizedBox(height: 6),
                             Text("Tap to Upload")
                           ],
@@ -404,7 +404,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                       onPressed: _loading ? null : _submitForm,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: const Color(0xFFFFD700),
+                        backgroundColor: const Color(0xFF3371F4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -419,7 +419,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black,
+                          color: Colors.white,
                         ),
                       ),
                     ),

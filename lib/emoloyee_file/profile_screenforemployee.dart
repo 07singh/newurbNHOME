@@ -23,9 +23,12 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
 
   String? _profileImageUrl;
   File? _pickedImage;
+  bool _isUploading = false;
 
   String? _savedPhone;
   String? _savedPosition;
+  String? _currentName;
+  String? _currentPosition;
 
   @override
   void initState() {
@@ -48,6 +51,8 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
     );
 
     _profileImageUrl = response.staff?.fullProfilePicUrl;
+    _currentName = response.staff?.fullName;
+    _currentPosition = response.staff?.position;
 
     return response;
   }
@@ -93,27 +98,29 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
     final file = await picker.pickImage(source: source);
 
     if (file != null) {
-      setState(() => _pickedImage = File(file.path));
+      // Auto-upload immediately after selecting image
+      await _uploadProfilePic(File(file.path));
     }
   }
 
   // ===================== UPLOAD PROFILE PIC =====================
-  Future<void> _uploadProfilePic() async {
-    if (_pickedImage == null) {
+  Future<void> _uploadProfilePic(File imageFile) async {
+    if (imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select an image")),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Uploading...")),
-    );
+    setState(() {
+      _pickedImage = imageFile;
+      _isUploading = true;
+    });
 
     final uploaded = await _service.updateProfilePicture(
       phone: _savedPhone!,
       position: _savedPosition!,
-      file: _pickedImage,
+      file: imageFile,
     );
 
     if (uploaded) {
@@ -123,12 +130,44 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
 
       setState(() {
         _pickedImage = null;
+        _isUploading = false;
         _futureProfile = _loadProfile();
       });
+
+      // Wait for profile to reload and then return updated image URL
+      final updatedProfile = await _loadProfile();
+      final updatedImageUrl = updatedProfile.staff?.fullProfilePicUrl;
+      
+      if (updatedImageUrl != null && mounted) {
+        Navigator.pop(context, {
+          'name': _currentName ?? '',
+          'position': _currentPosition ?? '',
+          'profileImageUrl': updatedImageUrl,
+          'phone': _savedPhone ?? '',
+        });
+      }
     } else {
+      setState(() {
+        _pickedImage = null;
+        _isUploading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Upload Failed")),
       );
+    }
+  }
+
+  // Helper method to return profile data when navigating back
+  void _returnProfileData() {
+    if (_profileImageUrl != null) {
+      Navigator.pop(context, {
+        'name': _currentName ?? '',
+        'position': _currentPosition ?? '',
+        'profileImageUrl': _profileImageUrl,
+        'phone': _savedPhone ?? '',
+      });
+    } else {
+      Navigator.pop(context);
     }
   }
 
@@ -136,7 +175,14 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          _returnProfileData();
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.deepPurple,
@@ -149,6 +195,10 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
             fontWeight: FontWeight.w600,
             fontSize: 22,
           ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: _returnProfileData,
         ),
       ),
 
@@ -185,7 +235,7 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
                 ),
 
                 Transform.translate(
-                  offset: const Offset(0, -60),
+                  offset: const Offset(0, -80),
                   child: Column(
                     children: [
                       Stack(
@@ -195,44 +245,46 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
                             backgroundImage: _pickedImage != null
                                 ? FileImage(_pickedImage!)
                                 : NetworkImage(_profileImageUrl!) as ImageProvider,
+                            child: _isUploading
+                                ? Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
 
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: _openPickerDialog,
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.black,
+                          if (!_isUploading)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: _openPickerDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black,
+                                  ),
+                                  child: const Icon(Icons.camera_alt,
+                                      size: 20, color: Colors.white),
                                 ),
-                                child: const Icon(Icons.camera_alt,
-                                    size: 20, color: Colors.white),
                               ),
                             ),
-                          ),
                         ],
                       ),
-
-                      const SizedBox(height: 10),
-
-                      if (_pickedImage != null)
-                        ElevatedButton(
-                          onPressed: _uploadProfilePic,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.black,
-                          ),
-                          child: const Text("Update Picture"),
-                        )
                     ],
                   ),
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                   child: Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -261,6 +313,7 @@ class _ProfileScreenemState extends State<ProfileScreenem> {
             ),
           );
         },
+      ),
       ),
     );
   }

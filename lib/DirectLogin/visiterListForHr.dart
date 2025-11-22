@@ -3,14 +3,14 @@ import '/Model/add_visitor_list.dart';
 import '/service/add_visitor_service_list.dart';
 import 'package:intl/intl.dart'; // For formatting date
 
-class VisitorListScreen extends StatefulWidget {
-  const VisitorListScreen({super.key});
+class VisitorListScreenhr extends StatefulWidget {
+  const VisitorListScreenhr({super.key});
 
   @override
-  State<VisitorListScreen> createState() => _VisitorListScreenState();
+  State<VisitorListScreenhr> createState() => _VisitorListScreenhrState();
 }
 
-class _VisitorListScreenState extends State<VisitorListScreen> {
+class _VisitorListScreenhrState extends State<VisitorListScreenhr> {
   final VisitorService _service = VisitorService();
   late Future<List<Visitor>> _futureVisitors;
 

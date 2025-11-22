@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '/service/add_staff_list_service.dart';
 import '/Model/add_staff_list.dart';
 
-class StaffListScreen extends StatefulWidget {
-  const StaffListScreen({super.key});
+class StaffListScreenhr extends StatefulWidget {
+  const StaffListScreenhr({super.key});
 
   @override
-  State<StaffListScreen> createState() => _StaffListScreenState();
+  State<StaffListScreenhr> createState() => _StaffListScreenhrState();
 }
 
-class _StaffListScreenState extends State<StaffListScreen> {
+class _StaffListScreenhrState extends State<StaffListScreenhr> {
   final StaffService _service = StaffService();
   late Future<StaffListResponse> _futureStaff;
 
@@ -33,10 +33,10 @@ class _StaffListScreenState extends State<StaffListScreen> {
           "Staff List",
           style: TextStyle(color: Colors.black),
         ),
-        backgroundColor: Color(0xFFFFD700),
+        backgroundColor: Color(0xFF3A62B7),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },

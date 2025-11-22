@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:testsd_app/service/add_associate_service.dart';
 import 'dart:convert';
 import 'dart:io';
 
 class AppConstants {
-  static const Color primaryColor = Color(0xFFFBE50A);
-  static const Color secondaryColor = Color(0xFFFBE50A);
+  static const Color primaryColor = Color(0xFFFFD700);
+  static const Color secondaryColor = Color(0xFFFFD700);
 
   static const Map<String, String> fieldLabels = {
     "FullName": "Full Name",
@@ -21,7 +22,6 @@ class AppConstants {
     "PanNo": "PAN Number",
     "Password": "Password",
     "ProjectName": "Project Name",
-    "Commission": "Commission (Rs)",
   };
 
   static const Map<String, String> fileLabels = {
@@ -42,6 +42,7 @@ class AddAssociateScreen extends StatefulWidget {
 class _AddAssociateScreenState extends State<AddAssociateScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _sameAsCurrent = false;
+  bool _isSubmitting = false;
 
   final Map<String, TextEditingController> _controllers = {
     for (var key in AppConstants.fieldLabels.keys) key: TextEditingController(),
@@ -56,6 +57,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   };
 
   String? _selectedState;
+  final AddAssociateService _associateService = AddAssociateService();
 
   // Multi-project selection
   final List<String> _projects = [
@@ -105,6 +107,16 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         _base64[key] = base64Image;
       });
 
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              "${AppConstants.fileLabels[key] ?? 'Image'} uploaded successfully",
+            ),
+          ),
+        );
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error picking file: $e")),
@@ -112,7 +124,9 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedProjects.isEmpty) {
@@ -142,24 +156,43 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
       }
     }
 
-    // Prepare submission data
-    final Map<String, String> projectCommissions = {
-      for (var project in _selectedProjects) project: _commissionControllers[project]!.text
-    };
+    setState(() => _isSubmitting = true);
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Success"),
-        content: Text("Form Submitted for projects:\n${projectCommissions.entries.map((e) => "${e.key}: Rs ${e.value}").join("\n")}"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          )
-        ],
-      ),
-    );
+    try {
+      final payload = _buildPayload();
+      final response = await _associateService.submitAssociate(payload);
+
+      if (!mounted) return;
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response.message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      
+      // Navigate back to dashboard after a short delay
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (!mounted) return;
+      
+      // Pop back to dashboard (DirectLoginPage)
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to submit: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   @override
@@ -184,7 +217,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
                 children: [
                   _profilePicField(),
                   const SizedBox(height: 20),
-                  ..._inputFields(),
+      ..._inputFields(),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _submit,
@@ -192,7 +225,16 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
                       backgroundColor: AppConstants.primaryColor,
                       minimumSize: const Size(double.infinity, 50),
                     ),
-                    child: const Text("Submit", style: TextStyle(color: Colors.black)),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                            ),
+                          )
+                        : const Text("Submit", style: TextStyle(color: Colors.black)),
                   ),
                 ],
               ),
@@ -329,6 +371,65 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         label: Text(label, style: const TextStyle(color: Colors.black)),
       ),
     );
+  }
+
+  Map<String, dynamic> _buildPayload() {
+    final Map<String, dynamic> payload = {
+      "FullName": _controllers["FullName"]!.text.trim(),
+      "Phone": _controllers["Phone"]!.text.trim(),
+      "Email": _controllers["Email"]!.text.trim(),
+      "CurrentAddress": _controllers["CurrentAddress"]!.text.trim(),
+      "PermanentAddress": _controllers["PermanentAddress"]!.text.trim(),
+      "State": _selectedState,
+      "City": _controllers["City"]!.text.trim(),
+      "Pincode": _controllers["Pincode"]!.text.trim(),
+      "AadhaarNo": _controllers["AadhaarNo"]!.text.trim(),
+      "PanNo": _controllers["PanNo"]!.text.trim(),
+      "Password": _controllers["Password"]!.text.trim(),
+      "Status": true,
+      "AssociateId": "",
+      "CreateDate": DateTime.now().toIso8601String(),
+      "JoiningDate": DateTime.now().toIso8601String(),
+      "LoginDate": null,
+      "LogoutDate": null,
+      "AadharFrontPic": _base64["AadharFrontPic"],
+      "AadhaarBackPic": _base64["AadhaarBackPic"],
+      "PanPic": _base64["PanPic"],
+      "Profile_Pic": _base64["ProfilePic"],
+    };
+
+    final commissionValues = _selectedProjects
+        .map((project) => _parseCommissionValue(_commissionControllers[project]?.text))
+        .whereType<num>()
+        .toList();
+    final totalCommission = commissionValues.fold<num>(0, (sum, value) => sum + value);
+    payload["CommissionReceived"] = totalCommission;
+
+    for (var i = 0; i < _selectedProjects.length; i++) {
+      final index = i + 1;
+      final project = _selectedProjects[i];
+      payload["ProjectName$index"] = project;
+
+      final commission = _parseCommissionValue(_commissionControllers[project]?.text);
+      if (commission != null) {
+        final key = "CommissionProject$index";
+        payload[key] = commission;
+        if (index == 2) {
+          payload["commissionProject$index"] = commission;
+        }
+      }
+    }
+
+    return payload;
+  }
+
+  num? _parseCommissionValue(String? value) {
+    final sanitized = value?.trim();
+    if (sanitized == null || sanitized.isEmpty) return null;
+    final integerValue = int.tryParse(sanitized);
+    if (integerValue != null) return integerValue;
+    final doubleValue = double.tryParse(sanitized);
+    return doubleValue;
   }
 
   Widget _textField(String key, String hint, {bool obscure = false}) {

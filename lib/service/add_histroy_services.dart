@@ -6,19 +6,27 @@ class DayBookHistoryService {
   static const String url = 'https://realapp.cheenu.in/Api/AddDayBookHistory';
 
   static Future<List<DayBookHistory>> fetchHistory() async {
-    final response = await http.get(Uri.parse(url));
+    try {
+      final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonData = json.decode(response.body);
-      final List<dynamic> dataList = jsonData['data1'] ?? [];
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
 
-      List<DayBookHistory> history = dataList
-          .map((entry) => DayBookHistory.fromJson(entry))
-          .toList();
+        if (jsonData['data1'] == null) {
+          return [];
+        }
 
-      return history;
-    } else {
-      throw Exception('Failed to load DayBook history');
+        final List<dynamic> dataList = jsonData['data1'];
+
+        return dataList
+            .map((item) => DayBookHistory.fromJson(item))
+            .toList();
+      } else {
+        throw Exception(
+            'Failed to load DayBook history. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception("Error fetching DayBook history: $e");
     }
   }
 }

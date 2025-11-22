@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '/emoloyee_file/profile_screenforemployee.dart';
 import 'DirectLogin/add_visitorem.dart' show AddVisitorScreenem;
 import 'EmployeeDashboard/attendanceHistory.dart';
@@ -15,6 +16,8 @@ import'/DirectLogin/add_visitor_screen.dart';
 import'/DirectLogin/addVisitorlistforem.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
+import '/service/banner_service.dart';
+import '/Model/banner_model.dart';
 import '/Employ.dart';
 import'/ChangePasswordScreenem.dart';
 
@@ -37,11 +40,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<String> _imageList = [
-    'assets/imglogo9.png',
-    'assets/imglogo8.png',
-    'assets/imglogo7.png',
-  ];
+  final List<String> _bannerImageUrls = [];
+  final BannerService _bannerService = BannerService();
+  bool _isLoadingBanners = true;
 
   int _currentIndex = 0;
   late Timer _timer;
@@ -56,9 +57,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _loadBanners();
 
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (_currentIndex < _imageList.length - 1) {
+      if (mounted && _bannerImageUrls.isNotEmpty && !_isLoadingBanners) {
+        if (_currentIndex < _bannerImageUrls.length - 1) {
         _currentIndex++;
       } else {
         _currentIndex = 0;
@@ -69,8 +72,116 @@ class _HomeScreenState extends State<HomeScreen> {
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
+        }
       }
     });
+  }
+
+  Future<void> _loadBanners() async {
+    setState(() {
+      _isLoadingBanners = true;
+    });
+
+    try {
+      final response = await _bannerService.getBannerImages();
+      print('Banner response received: ${response != null}');
+      
+      if (response != null && response.banners.isNotEmpty) {
+        List<String> imageUrls = [];
+        // Take only the first banner and use its 3 images
+        var firstBanner = response.banners.first;
+        print('Processing banner ID: ${firstBanner.id}');
+        
+        // Helper function to normalize image URL
+        String? _normalizeImageUrl(String? imagePath) {
+          if (imagePath == null || imagePath.isEmpty || imagePath.toLowerCase() == 'null') {
+            return null;
+          }
+          final trimmed = imagePath.trim();
+          // If already a full URL, return as is
+          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+          }
+          // If starts with /, append to base URL
+          if (trimmed.startsWith('/')) {
+            return 'https://realapp.cheenu.in$trimmed';
+          }
+          // Otherwise, add / before the path
+          return 'https://realapp.cheenu.in/$trimmed';
+        }
+        
+        // Add only the three images from the first banner
+        String? url1 = _normalizeImageUrl(firstBanner.image1);
+        if (url1 != null) {
+          print('Adding image1: $url1');
+          imageUrls.add(url1);
+        }
+        
+        String? url2 = _normalizeImageUrl(firstBanner.image2);
+        if (url2 != null) {
+          print('Adding image2: $url2');
+          imageUrls.add(url2);
+        }
+        
+        String? url3 = _normalizeImageUrl(firstBanner.image3);
+        if (url3 != null) {
+          print('Adding image3: $url3');
+          imageUrls.add(url3);
+        }
+
+        print('Total image URLs: ${imageUrls.length}');
+        setState(() {
+          _bannerImageUrls.clear();
+          _bannerImageUrls.addAll(imageUrls);
+          _isLoadingBanners = false;
+          _currentIndex = 0; // Reset to first image
+          if (_bannerImageUrls.isEmpty) {
+            print('No banner images found, using fallback');
+            // Fallback to default images if no banners found
+            _bannerImageUrls.addAll([
+              'assets/imglogo9.png',
+              'assets/imglogo8.png',
+              'assets/imglogo7.png',
+            ]);
+          }
+          // Reset PageView to first page
+          if (_pageController.hasClients && _bannerImageUrls.isNotEmpty) {
+            _pageController.jumpToPage(0);
+          }
+        });
+      } else {
+        print('No banners in response, using fallback');
+        setState(() {
+          _isLoadingBanners = false;
+          _currentIndex = 0;
+          // Fallback to default images if API fails
+          _bannerImageUrls.clear();
+          _bannerImageUrls.addAll([
+            'assets/imglogo9.png',
+            'assets/imglogo8.png',
+            'assets/imglogo7.png',
+          ]);
+          if (_pageController.hasClients && _bannerImageUrls.isNotEmpty) {
+            _pageController.jumpToPage(0);
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading banners: $e');
+      setState(() {
+        _isLoadingBanners = false;
+        _currentIndex = 0;
+        _bannerImageUrls.clear();
+        _bannerImageUrls.addAll([
+          'assets/imglogo9.png',
+          'assets/imglogo8.png',
+          'assets/imglogo7.png',
+        ]);
+        if (_pageController.hasClients && _bannerImageUrls.isNotEmpty) {
+          _pageController.jumpToPage(0);
+        }
+      });
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -93,11 +204,14 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => ProfileScreenem (phone: _userPhone ?? ''),
       ),
     );
-    if (result != null && result is Map<String, String>) {
+    if (result != null && result is Map<String, dynamic>) {
       setState(() {
         _userName = result['name'] ?? _userName ?? 'User';
         _userRole = result['position'] ?? _userRole ?? 'Employee';
-        _profileImageUrl = result['profileImageUrl'];
+        // Update profile image if a new value is provided
+        if (result['profileImageUrl'] != null && result['profileImageUrl'].toString().isNotEmpty) {
+          _profileImageUrl = result['profileImageUrl'];
+        }
         _userPhone = result['phone'] ?? _userPhone ?? '';
       });
       await _storage.write(key: 'user_name', value: _userName);
@@ -108,6 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_userPhone != null) {
         await _storage.write(key: 'user_mobile', value: _userPhone);
       }
+      // Force rebuild to update drawer image
+      setState(() {});
     }
   }
 
@@ -162,16 +278,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      radius: 25, // Slightly smaller avatar
+                      radius: 28,
                       backgroundColor: Colors.white.withOpacity(0.3),
                       child: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
                           ? ClipOval(
-                        child: Image.network(
-                          _profileImageUrl!,
+                        child: CachedNetworkImage(
+                          imageUrl: _profileImageUrl!,
                           fit: BoxFit.cover,
-                          width: 50,
-                          height: 50,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
+                          width: 56,
+                          height: 56,
+                          placeholder: (context, url) => Container(
+                            color: Colors.white.withOpacity(0.2),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const Icon(
                             Icons.person,
                             size: 28,
                             color: Colors.white,
@@ -193,6 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            // 1. Dashboard
             ListTile(
               leading: const Icon(Icons.dashboard, color: Colors.deepPurple),
               title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.w500)),
@@ -200,6 +326,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
               },
             ),
+            // 2. Profile
+            ListTile(
+              leading: const Icon(Icons.person, color: Colors.teal),
+              title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToProfile();
+              },
+            ),
+            // 3. Attendance
             ListTile(
               leading: const Icon(Icons.access_time, color: Colors.blue),
               title: const Text('Attendance', style: TextStyle(fontWeight: FontWeight.w500)),
@@ -209,14 +345,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(builder: (context) => const AttendanceRouter()),
                 );
               },
-
-
             ),
-            ListTile(
-              leading: const Icon(Icons.settings, color: Colors.blue),
-              title: const Text('setting', style: TextStyle(fontWeight: FontWeight.w500)),
-              onTap: _openChangePasswordScreenem,
-            ),
+            // 4. Attendance Record
             ListTile(
               leading: const Icon(Icons.fact_check, color: Colors.green),
               title: const Text('Attendance Record', style: TextStyle(fontWeight: FontWeight.w500)),
@@ -239,13 +369,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
             ),
+            // 5. Setting
             ListTile(
-              leading: const Icon(Icons.person, color: Colors.teal),
-              title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.w500)),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToProfile();
-              },
+              leading: const Icon(Icons.settings, color: Colors.blue),
+              title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.w500)),
+              onTap: _openChangePasswordScreenem,
             ),
             const Divider(),
             ListTile(
@@ -285,21 +413,173 @@ class _HomeScreenState extends State<HomeScreen> {
             // Banner Carousel
             SizedBox(
               height: 150,
-              child: PageView.builder(
+              child: _isLoadingBanners
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 8),
+                          Text('Loading banners...'),
+                        ],
+                      ),
+                    )
+                  : _bannerImageUrls.isEmpty
+                      ? Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.grey[300],
+                          ),
+                          child: const Center(
+                            child: Text('No banners available'),
+                          ),
+                        )
+                      : Stack(
+                          children: [
+                            PageView.builder(
+                          key: ValueKey('banner_${_bannerImageUrls.length}'),
                 controller: _pageController,
-                itemCount: _imageList.length,
+                          itemCount: _bannerImageUrls.length,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentIndex = index;
+                            });
+                          },
                 itemBuilder: (context, index) {
+                            String imageUrl = _bannerImageUrls[index];
+                            bool isNetworkImage = imageUrl.startsWith('http');
+                            
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      image: DecorationImage(
-                        image: AssetImage(_imageList[index]),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: isNetworkImage
+                                    ? Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        headers: {
+                                          'Accept': 'image/*',
+                                        },
+                                        errorBuilder: (context, error, stackTrace) {
+                                          print('❌ Error loading network image: $imageUrl');
+                                          print('Error type: ${error.runtimeType}');
+                                          print('Error details: $error');
+                                          if (error is Exception) {
+                                            print('Exception: ${error.toString()}');
+                                          }
+                                          return Container(
+                                            color: Colors.grey[300],
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.broken_image,
+                                                  size: 50,
+                                                  color: Colors.grey,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                const Text(
+                                                  'Failed to load image',
+                                                  style: TextStyle(color: Colors.grey),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                  child: Text(
+                                                    imageUrl,
+                                                    style: const TextStyle(
+                                                      color: Colors.grey,
+                                                      fontSize: 10,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Container(
+                                            color: Colors.grey[200],
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                value: loadingProgress.expectedTotalBytes != null
+                                                    ? loadingProgress.cumulativeBytesLoaded /
+                                                        loadingProgress.expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : Image.asset(
+                                        imageUrl,
                         fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          print('Error loading asset image: $imageUrl - $error');
+                                          return Container(
+                                            color: Colors.grey[300],
+                                            child: const Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.broken_image,
+                                                  size: 50,
+                                                  color: Colors.grey,
+                                                ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Failed to load image',
+                                                  style: TextStyle(color: Colors.grey),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                       ),
                     ),
                   );
                 },
+                            ),
+                            // Debug indicator (remove in production)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${_currentIndex + 1}/${_bannerImageUrls.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
               ),
             ),
             const SizedBox(height: 20),
@@ -397,38 +677,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.deepPurple,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          if (index == 1) {
-            _navigateToProfile();
-          } else if (index == 2) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Reports clicked')),
-            );
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Reports',
-          ),
-        ],
       ),
     );
   }

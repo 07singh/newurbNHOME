@@ -425,6 +425,20 @@ class _PlotScreenState extends State<PlotScreen> {
       );
       return;
     }
+    
+    final plot = plots[plotId]!;
+    
+    // Don't open dialog if plot is already booked or sold out
+    if (plot.bookingStatus == BookingStatus.booked || plot.bookingStatus == BookingStatus.sellout) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Plot $plotId is already ${plot.statusText.toLowerCase()}'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
     showDialog(
       context: context,
       builder: (context) => BookingDialog(
@@ -457,8 +471,10 @@ class _PlotScreenState extends State<PlotScreen> {
     final plot = plots[plotId]!;
     final isLarge = ['76', '79', '82', '85', '88', '91'].contains(plotId);
     final meas = _measurements[plotId];
+    final isBookedOrSoldOut = plot.bookingStatus == BookingStatus.booked || 
+                              plot.bookingStatus == BookingStatus.sellout;
     return GestureDetector(
-      onTap: () => _showBookingDialog(plotId),
+      onTap: isBookedOrSoldOut ? null : () => _showBookingDialog(plotId),
       child: Container(
         width: width,
         height: height,

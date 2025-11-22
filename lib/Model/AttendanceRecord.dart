@@ -37,9 +37,9 @@ class AttendanceRecord {
     return AttendanceRecord(
       id: json['Id'] ?? 0,
       employeeName: json['EmployeeName'] ?? '',
-      createDate: DateTime.parse(json['Createdate'] ?? DateTime.now().toString()),
-      checkInTime: DateTime.parse(json['CheckInTime'] ?? DateTime.now().toString()),
-      checkOutTime: json['CheckOutTime'] != null ? DateTime.parse(json['CheckOutTime']) : null,
+      createDate: _parseDate(json['Createdate']),
+      checkInTime: _parseDate(json['CheckInTime']),
+      checkOutTime: json['CheckOutTime'] != null ? _parseDate(json['CheckOutTime']) : null,
       checkInLocation: json['CheckInLocation'] ?? '',
       checkOutLocation: json['CheckOutLocation'] ?? '',
       checkInImage: json['CheckInImage'] ?? '',
@@ -72,6 +72,18 @@ class AttendanceRecord {
       'EmpMob': empMob,
     };
   }
+
+  /// SAFE DATE PARSING
+  static DateTime _parseDate(dynamic value) {
+    if (value == null || value.toString().isEmpty) {
+      return DateTime.now();
+    }
+    try {
+      return DateTime.parse(value.toString());
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
 }
 
 class AttendanceResponse {
@@ -86,9 +98,9 @@ class AttendanceResponse {
   factory AttendanceResponse.fromJson(Map<String, dynamic> json) {
     return AttendanceResponse(
       message: json['message'] ?? '',
-      data: (json['data1'] as List<dynamic>?)
-          ?.map((item) => AttendanceRecord.fromJson(item))
-          .toList() ?? [],
+      data: (json['data1'] as List<dynamic>? ?? [])
+          .map((item) => AttendanceRecord.fromJson(item))
+          .toList(),
     );
   }
 }

@@ -40,7 +40,10 @@ class _SignInPageState extends State<SignInPage> {
     setState(() => _isLoading = false);
 
     if (loginData != null && loginData.statuscode == "Success") {
-      if (loginData.position == 'TL' || loginData.position == 'Sales Executive') {
+      if (loginData.position == 'TL' ||
+          loginData.position == 'Sales Executive' ||
+          loginData.position == 'Accountant') {   // 👈 ADDED
+
         await storage.write(key: 'user_id', value: (loginData.id ?? '').toString());
         await storage.write(key: 'user_name', value: loginData.name ?? '');
         await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
@@ -65,7 +68,9 @@ class _SignInPageState extends State<SignInPage> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access Denied: Only TL and Sales Executive can login here')),
+          const SnackBar(
+            content: Text('Access Denied: Only TL, Sales Executive and Accountant can login here'),
+          ),
         );
       }
     } else {
@@ -133,6 +138,7 @@ class _SignInPageState extends State<SignInPage> {
                       items: const [
                         DropdownMenuItem(value: 'TL', child: Text('TL')),
                         DropdownMenuItem(value: 'Sales Executive', child: Text('Sales Executive')),
+                        DropdownMenuItem(value: 'Accountant', child: Text('Accountant')), // 👈 ADDED
                       ],
                       onChanged: (value) => setState(() => position = value!),
                       decoration: InputDecoration(

@@ -17,7 +17,6 @@ class AssociateProfileScreen extends StatefulWidget {
 class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   final AssociateProfileService _profileService = AssociateProfileService();
   final AssociateProfileChangeService _changeService = AssociateProfileChangeService();
-  final ImagePicker _imagePicker = ImagePicker();
 
   late Future<AssociateProfile?> _futureProfile;
   String? _profileImageUrl;
@@ -41,10 +40,23 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
     try {
       final response = await _profileService.fetchProfile(widget.phone);
       if (response != null) {
-        _profileImageUrl = "https://realapp.cheenu.in${response.profileImageUrl ?? ''}";
+        print('📸 AssociateProfileScreen - Raw profileImageUrl: ${response.profileImageUrl}');
+        if (response.profileImageUrl != null && response.profileImageUrl!.isNotEmpty) {
+          String imageUrl = response.profileImageUrl!.trim();
+          // Ensure it starts with / if it doesn't already
+          if (!imageUrl.startsWith('/')) {
+            imageUrl = '/$imageUrl';
+          }
+          _profileImageUrl = "https://realapp.cheenu.in$imageUrl";
+          print('✅ AssociateProfileScreen - Final image URL: $_profileImageUrl');
+        } else {
+          print('⚠️ AssociateProfileScreen - profileImageUrl is null or empty');
+          _profileImageUrl = null;
+        }
       }
       return response;
     } catch (e) {
+      print('❌ AssociateProfileScreen - Error loading profile: $e');
       throw Exception('Failed to load profile: $e');
     }
   }
@@ -56,61 +68,47 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
     });
   }
 
-  Future<void> _showImageSourceDialog() async {
+  // ===================== PICKER BOTTOM SHEET =====================
+  void _showImageSourceDialog() {
     if (_isUploading) return;
 
-    await showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Change Profile Picture"),
-          content: const Text("Choose image source"),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          actions: [
-            _buildDialogButton("Camera", Icons.camera_alt, () {
-              Navigator.pop(context);
-              _pickImage(ImageSource.camera);
-            }),
-            _buildDialogButton("Gallery", Icons.photo_library, () {
-              Navigator.pop(context);
-              _pickImage(ImageSource.gallery);
-            }),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: Colors.red)),
-            ),
-          ],
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Camera"),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo),
+                title: const Text("Gallery"),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildDialogButton(String text, IconData icon, VoidCallback onPressed) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 20),
-      label: Text(text),
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.deepPurple,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-    );
-  }
-
+  // ===================== PICK IMAGE =====================
   Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _imagePicker.pickImage(
-        source: source,
-        maxWidth: 850,
-        maxHeight: 850,
-        imageQuality: 85,
-      );
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: source);
 
-      if (pickedFile != null) {
-        await _uploadImage(File(pickedFile.path));
-      }
-    } catch (e) {
-      _showSnackBar("Failed to pick image: ${e.toString()}");
+    if (file != null) {
+      // Auto-upload immediately after selecting image
+      await _uploadImage(File(file.path));
     }
   }
 
@@ -121,12 +119,17 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
       final response = await _changeService.changeProfileImage(widget.phone, image);
 
       if (response.status == "Success") {
-        setState(() {
-          _selectedImage = image;
-          _profileImageUrl = null;
-        });
         _showSnackBar(response.message);
         await _refresh();
+        
+        // Update local state with new image
+        final updatedProfile = await _loadProfile();
+        if (updatedProfile != null && mounted) {
+          setState(() {
+            _selectedImage = null; // Clear selected image after refresh
+            _profileImageUrl = "https://realapp.cheenu.in${updatedProfile.profileImageUrl ?? ''}";
+          });
+        }
       } else {
         _showSnackBar("Failed: ${response.message}");
       }
@@ -134,6 +137,28 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
       _showSnackBar("Upload failed: ${e.toString()}");
     } finally {
       setState(() => _isUploading = false);
+    }
+  }
+  
+  // Helper method to return profile data when navigating back
+  Future<void> _returnProfileData() async {
+    try {
+      // Reload profile to get latest data before returning
+      final profile = await _loadProfile();
+      if (profile != null && mounted) {
+        final imageUrl = _profileImageUrl ?? "https://realapp.cheenu.in${profile.profileImageUrl ?? ''}";
+        Navigator.pop(context, {
+          'name': profile.fullName,
+          'profileImageUrl': imageUrl,
+          'phone': profile.phone,
+        });
+      } else {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -166,6 +191,10 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
         ),
         centerTitle: true,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: _returnProfileData,
+        ),
       ),
       body: FutureBuilder<AssociateProfile?>(
         future: _futureProfile,
@@ -289,12 +318,13 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
   }
 
   /// ===========================
-  /// UPDATED AVATAR (ONLY CAMERA ICON CLICKABLE)
+  /// PROFILE AVATAR WITH CAMERA ICON
   /// ===========================
   Widget _buildProfileAvatar() {
     return Stack(
+      clipBehavior: Clip.none,
       children: [
-        // Profile Avatar (NOT clickable)
+        // Profile Avatar
         Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -327,33 +357,20 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           ),
         ),
 
-        // Camera Icon (ONLY clickable area)
+        // Camera Icon (clickable)
         if (!_isUploading)
           Positioned(
             bottom: 0,
             right: 0,
             child: GestureDetector(
-              onTap: _showImageSourceDialog, // Only camera icon opens dialog
+              onTap: _showImageSourceDialog,
               child: Container(
-                height: 40,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple,
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: Colors.black,
                 ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
               ),
             ),
           ),

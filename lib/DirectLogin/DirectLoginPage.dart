@@ -21,7 +21,14 @@ import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/service/profile_service.dart';
 import '/Model/profile_model.dart';
+import '/Model/attendance_summary.dart';
+import '/Model/add_history_screen.dart';
+import '/service/add_histroy_services.dart';
+import '/service/associate_list_service.dart' as associate_list_service;
+import '/service/attendancerecordService.dart' as attendance_record_service;
+import '/service/booking service.dart' as plot_service;
 import '/EmployeeDashboard/attendanceHistory.dart';
+import '/screens/banner_management_screen.dart';
 import'/changepassword.dart';
 
 class DirectloginPage extends StatefulWidget {
@@ -54,12 +61,25 @@ class _DirectloginPageState extends State<DirectloginPage>
   // Services
   final StaffProfileService _profileService = StaffProfileService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final attendance_record_service.AttendanceService _attendanceRecordService =
+      attendance_record_service.AttendanceService();
+  final associate_list_service.AssociateService _associateListService =
+      associate_list_service.AssociateService();
+
+  bool _isLoadingStats = false;
+  int _presentCount = 0;
+  int _bookedPlotCount = 0;
+  int _pendingBookingCount = 0;
+  int _associateCount = 0;
+  int _dayBookTodayCount = 0;
+  int _dayBookTotalCount = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadProfileData();
+    _loadDashboardStats();
   }
 
   @override
@@ -145,6 +165,62 @@ class _DirectloginPageState extends State<DirectloginPage>
       _profileError = null;
     });
     await _loadProfileData();
+    await _loadDashboardStats();
+  }
+
+  Future<void> _loadDashboardStats() async {
+    setState(() {
+      _isLoadingStats = true;
+    });
+
+    try {
+      final summaryFuture = _attendanceRecordService.getAttendanceSummary();
+      final bookedPlotsFuture = plot_service.PlotService.getBookedPlots();
+      final pendingPlotsFuture = plot_service.PlotService.getPendingPlots();
+      final associatesFuture = _associateListService.fetchAssociates();
+      final dayBookFuture = DayBookHistoryService.fetchHistory();
+
+      final AttendanceSummary? summary = await summaryFuture;
+      final bookedPlots = await bookedPlotsFuture;
+      final pendingPlots = await pendingPlotsFuture;
+      final associates = await associatesFuture;
+      final dayBookHistory = await dayBookFuture;
+
+      final today = DateTime.now();
+      final todayDayBookCount = dayBookHistory.where((entry) {
+        final entryDate = entry.dateTime;
+        if (entryDate == null) return false;
+        return entryDate.year == today.year &&
+            entryDate.month == today.month &&
+            entryDate.day == today.day;
+      }).length;
+
+      if (mounted) {
+        setState(() {
+          _presentCount = summary?.count.present ?? 0;
+          _bookedPlotCount = bookedPlots.length;
+          _pendingBookingCount = pendingPlots.length;
+          _associateCount = associates.length;
+          _dayBookTodayCount = todayDayBookCount;
+          _dayBookTotalCount = dayBookHistory.length;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh stats: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingStats = false;
+        });
+      }
+    }
   }
 
   @override
@@ -269,22 +345,13 @@ class _DirectloginPageState extends State<DirectloginPage>
                 title: "Add Day Book",
                 onTap: () => _navigateTo(const AddDayBookScreen()),
               ),
-              _buildDrawerItem(
-                icon: Icons.book_online_rounded,
-                title: "Day Booking Book",
-                onTap: () => _navigateTo(const AddDayBookScreen()),
-              ),
+
               _buildDrawerItem(
                 icon: Icons.list_alt_rounded,
                 title: "Day Book Details",
                 onTap: () => _navigateTo(const DayBookHistoryScreen()),
               ),
-              _buildDrawerSection("VISITS"),
-              _buildDrawerItem(
-                icon: Icons.visibility_rounded,
-                title: "Total Visits",
-                onTap: () {},
-              ),
+
               _buildDrawerItem(
                 icon: Icons.today_rounded,
                 title: "Add visitor list",
@@ -292,8 +359,14 @@ class _DirectloginPageState extends State<DirectloginPage>
               ),
               _buildDrawerItem(
                 icon: Icons.today_rounded,
-                title: "setting",
+                title: "Settings",
                 onTap: () => _openChangePassword(userRole),
+              ),
+              _buildDrawerSection("BANNER MANAGEMENT"),
+              _buildDrawerItem(
+                icon: Icons.image_rounded,
+                title: "Banner Management",
+                onTap: () => _navigateTo(const BannerManagementScreen()),
               ),
             ],
             if (userRole == "Associate") ...[
@@ -571,6 +644,10 @@ class _DirectloginPageState extends State<DirectloginPage>
             color: Colors.grey.shade800,
           ),
         ),
+        if (_isLoadingStats) ...[
+          const SizedBox(height: 8),
+          const LinearProgressIndicator(minHeight: 4),
+        ],
         const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -583,10 +660,10 @@ class _DirectloginPageState extends State<DirectloginPage>
             if (userRole == "Director" || userRole == "Admin") ...[
               _buildStatCard(
                 title: "Attendence Record",
-                value: "",
+                value: _presentCount.toString(),
                 icon: Icons.map,
                 color: Color(0xFFFFD700),
-                change: " added this month",
+                change: "Staff present",
                 onTap: () {
                   Navigator.push(
                     context,
@@ -598,10 +675,10 @@ class _DirectloginPageState extends State<DirectloginPage>
               ),
               _buildStatCard(
                 title: "Booking Plot Now",
-                value: "85",
+                value: _bookedPlotCount.toString(),
                 icon: Icons.event_available,
                 color: Colors.green,
-                change: "15 booked recently",
+                change: "Booked plots",
                 onTap: () {
                   Navigator.push(
                     context,
@@ -613,10 +690,10 @@ class _DirectloginPageState extends State<DirectloginPage>
               ),
               _buildStatCard(
                 title: "Booking Requests",
-                value: "85",
+                value: _pendingBookingCount.toString(),
                 icon: Icons.home_work_rounded,
                 color: Colors.green,
-                change: "15 booked recently",
+                change: "Pending approvals",
                 onTap: () {
                   Navigator.push(
                     context,
@@ -631,10 +708,10 @@ class _DirectloginPageState extends State<DirectloginPage>
               ),
               _buildStatCard(
                 title: "Add Associate",
-                value: "32",
+                value: _associateCount.toString(),
                 icon: Icons.person_add_alt_1_rounded,
                 color: Colors.purple,
-                change: " new associates",
+                change: "Total associates",
                 onTap: () {
                   Navigator.push(
                     context,
@@ -648,10 +725,10 @@ class _DirectloginPageState extends State<DirectloginPage>
             if (userRole == "Director") ...[
               _buildStatCard(
                 title: "Add Day Book",
-                value: "12",
+                value: _dayBookTodayCount.toString(),
                 icon: Icons.book_rounded,
                 color: Colors.orange,
-                change: "3 new entries today",
+                change: "Entries today",
                 onTap: () {
                   Navigator.push(
                     context,
@@ -663,10 +740,10 @@ class _DirectloginPageState extends State<DirectloginPage>
               ),
               _buildStatCard(
                 title: "Day Book Details",
-                value: "58",
+                value: _dayBookTotalCount.toString(),
                 icon: Icons.receipt_long,
                 color: Colors.teal,
-                change: "Updated recently",
+                change: "All entries",
                 onTap: () {
                   Navigator.push(
                     context,
@@ -811,11 +888,7 @@ class _DirectloginPageState extends State<DirectloginPage>
                 ),
                 const SizedBox(width: 12),
               ],
-              _buildActionButton(
-                "Leave Requests",
-                Icons.beach_access_rounded,
-                Colors.orange,
-              ),
+
               const SizedBox(width: 12),
               if (userRole == "Director") ...[
                 _buildActionButton(
@@ -830,11 +903,7 @@ class _DirectloginPageState extends State<DirectloginPage>
                   },
                 ),
                 const SizedBox(width: 12),
-                _buildActionButton(
-                  "Reports",
-                  Icons.analytics_rounded,
-                  Colors.red,
-                ),
+
               ],
               if (userRole == "Associate") ...[
                 _buildActionButton(

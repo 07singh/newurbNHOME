@@ -5,14 +5,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 
-class AddStaffScreen extends StatefulWidget {
-  const AddStaffScreen({Key? key}) : super(key: key);
+class AddStaffScreenhr extends StatefulWidget {
+  const AddStaffScreenhr({Key? key}) : super(key: key);
 
   @override
-  State<AddStaffScreen> createState() => _AddStaffScreenState();
+  State<AddStaffScreenhr> createState() => _AddStaffScreenhrState();
 }
 
-class _AddStaffScreenState extends State<AddStaffScreen> {
+class _AddStaffScreenhrState extends State<AddStaffScreenhr> {
   final _formKey = GlobalKey<FormState>();
   final picker = ImagePicker();
 
@@ -162,7 +162,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Add Staff", style: TextStyle(color: Colors.black)),
-        backgroundColor: Color(0xFFFFD700),
+        backgroundColor: Color(0xFF3A62B7),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -258,7 +258,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                 child: ElevatedButton(
                   onPressed: _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFFFD700),
+                    backgroundColor: Color(0xFF3A62B7),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text(

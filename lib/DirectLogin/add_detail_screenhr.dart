@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '/Model/add_history_screen.dart';
 
-class DayBookDetailScreen extends StatelessWidget {
+class DayBookDetailScreenhr extends StatelessWidget {
   final DayBookHistory entry;
 
-  const DayBookDetailScreen({super.key, required this.entry});
+  const DayBookDetailScreenhr({super.key, required this.entry});
 
   @override
   Widget build(BuildContext context) {
@@ -70,18 +70,18 @@ class DayBookDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             child: screenshotBytes != null
                 ? Image.memory(
-                    screenshotBytes,
-                    height: 250,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  )
+              screenshotBytes,
+              height: 250,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            )
                 : Image.network(
-                    screenshotUrl!,
-                    height: 250,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => failedImageWidget,
-                  ),
+              screenshotUrl!,
+              height: 250,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => failedImageWidget,
+            ),
           ),
         ],
       );
@@ -105,13 +105,13 @@ class DayBookDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFFFD700),
+        backgroundColor: const Color(0xFF3371F4),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
           "${entry.employeeName ?? 'Employee'}'s Day Book",
           style: const TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -119,7 +119,7 @@ class DayBookDetailScreen extends StatelessWidget {
       ),
 
       body: Container(
-        color: Colors.grey.shade100,
+        color: Colors.black,
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(

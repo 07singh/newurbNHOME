@@ -8,13 +8,14 @@ class ChangePasswordService {
   static const String baseUrl = 'https://realapp.cheenu.in/Api/AssociateChangePass';
 
   static Future<ChangePasswordResponse> changePassword({
+    required String phone,
     required String oldPassword,
     required String newPassword,
     required String confirmPassword,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/ChangePassword')
-          .replace(queryParameters: {
+      final uri = Uri.parse(baseUrl).replace(queryParameters: {
+        'phone': phone,
         'OldPassword': oldPassword,
         'NewPassword': newPassword,
         'ConfirmPassword': confirmPassword,

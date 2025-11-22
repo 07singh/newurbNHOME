@@ -4,14 +4,14 @@ import '/Model/add_history_screen.dart';
 import '/service/add_histroy_services.dart';
 import '/DirectLogin/add_detail_screen.dart';
 
-class DayBookHistoryScreen extends StatefulWidget {
-  const DayBookHistoryScreen({super.key});
+class DayBookHistoryScreenhr extends StatefulWidget {
+  const DayBookHistoryScreenhr({super.key});
 
   @override
-  State<DayBookHistoryScreen> createState() => _DayBookHistoryScreenState();
+  State<DayBookHistoryScreenhr> createState() => _DayBookHistoryScreenhrState();
 }
 
-class _DayBookHistoryScreenState extends State<DayBookHistoryScreen> {
+class _DayBookHistoryScreenhrState extends State<DayBookHistoryScreenhr> {
   late Future<List<DayBookHistory>> _historyFuture;
 
   @override
@@ -28,13 +28,13 @@ class _DayBookHistoryScreenState extends State<DayBookHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFFFD700), // Gold Color
+        backgroundColor: const Color(0xFF3371F4), // Gold Color
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
           'Day Book History',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -124,9 +124,9 @@ class _DayBookHistoryScreenState extends State<DayBookHistoryScreen> {
 
                             subtitle: Text(
                               'Amount: ₹${entry.amount?.toStringAsFixed(2) ?? '-'}\n'
-                              'Purpose: ${entry.purpose ?? '-'}\n'
-                              'Payment Given By: ${entry.paymentGivenBy ?? '-'}\n'
-                              'Mode: ${entry.paymentMode ?? '-'}',
+                                  'Purpose: ${entry.purpose ?? '-'}\n'
+                                  'Payment Given By: ${entry.paymentGivenBy ?? '-'}\n'
+                                  'Mode: ${entry.paymentMode ?? '-'}',
                             ),
 
                             trailing: const Icon(

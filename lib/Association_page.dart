@@ -202,11 +202,14 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         builder: (context) => AssociateProfileScreen(phone: _userPhone ?? widget.phone),
       ),
     );
-    if (result != null && result is Map<String, String>) {
+
+    if (result != null && result is Map<String, dynamic>) {
       setState(() {
         _userName = result['name'] ?? _userName;
-        _userRole = result['position'] ?? _userRole;
-        _profileImageUrl = result['profileImageUrl'];
+        // Only update profile image if a new value is provided
+        if (result['profileImageUrl'] != null) {
+          _profileImageUrl = result['profileImageUrl'];
+        }
       });
       // Reload profile data after changes
       _loadProfileData();
@@ -252,6 +255,20 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       // Keep default count (0) on error
     }
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   List<DashboardItem> get items => [
     DashboardItem(
@@ -346,7 +363,10 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     } else if (title == "Settings") {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),);
+        MaterialPageRoute(
+          builder: (context) => ChangePasswordScreen(phone: _userPhone ?? widget.phone),
+        ),
+      );
 
 
 
@@ -684,10 +704,10 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                 children: [
                   _buildDrawerSection("MAIN", [
                     _buildDrawerItem("Dashboard", Icons.dashboard, Colors.deepPurple),
-                    _buildDrawerItem("My Leads", Icons.leaderboard, Colors.blue),
 
 
-                    _buildDrawerItem("My Booking", Icons.book_online, Colors.green),
+
+
                   ]),
                   _buildDrawerSection("FINANCE", [
                     _buildDrawerItem("Income History", Icons.attach_money, Colors.orange),

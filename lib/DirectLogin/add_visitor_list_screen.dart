@@ -44,7 +44,7 @@ class _VisitorListScreenState extends State<VisitorListScreen> {
           'Visitor List',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.blue,
         centerTitle: true,
         elevation: 2,
       ),
@@ -78,7 +78,7 @@ class _VisitorListScreenState extends State<VisitorListScreen> {
                     elevation: 3,
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         child: Text(
                           (visitor.name != null && visitor.name!.isNotEmpty)

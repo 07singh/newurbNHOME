@@ -803,7 +803,7 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
                       ? 'PROCESSING...'
                       : _isCheckOutPhotoTaken
                       ? 'PHOTO TAKEN'
-                      : 'TAKE PHOTO',
+                      : 'CHECK-OUT PHOTO',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

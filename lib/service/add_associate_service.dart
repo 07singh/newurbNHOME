@@ -1,37 +1,34 @@
 import 'dart:convert';
-import 'dart:io';
+
 import 'package:http/http.dart' as http;
 
-class AssociateService {
-  static Future<Map<String, dynamic>> addAssociate({
-    required Map<String, String> fields,
-    File? aadharFront,
-    File? aadharBack,
-    File? panPic,
-  }) async {
-    var uri = Uri.parse("https://realapp.cheenu.in/api/associate/add");
-    var request = http.MultipartRequest("POST", uri);
+import '../Model/add_associate_model.dart';
 
-    // Add text fields
-    request.fields.addAll(fields);
+class AddAssociateService {
+  static const String _endpoint = 'https://realapp.cheenu.in/api/associate/add';
 
-    // Add files
-    if (aadharFront != null) {
-      request.files.add(await http.MultipartFile.fromPath('AadharFront', aadharFront.path));
+  Future<AddAssociateResponse> submitAssociate(
+      Map<String, dynamic> payload) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_endpoint),
+        headers: const {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = response.body.isEmpty ? {} : jsonDecode(response.body);
+        return AddAssociateResponse.fromJson(body);
+      }
+
+      throw Exception(
+        'Failed to submit associate (${response.statusCode}): ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Unable to submit associate: $e');
     }
-    if (aadharBack != null) {
-      request.files.add(await http.MultipartFile.fromPath('AadharBack', aadharBack.path));
-    }
-    if (panPic != null) {
-      request.files.add(await http.MultipartFile.fromPath('PanPic', panPic.path));
-    }
-
-    var response = await request.send();
-    var body = await response.stream.bytesToString();
-
-    return {
-      "status": response.statusCode,
-      "body": jsonDecode(body),
-    };
   }
 }

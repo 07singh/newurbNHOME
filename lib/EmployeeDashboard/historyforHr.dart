@@ -21,7 +21,7 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
   List<PendingAttendance> _pendingAttendance = [];
   List<AttendanceRecord> _allAttendance = [];
   List<AbsentStaff> _absentStaff = [];
-  
+
   bool _isLoading = false;
   String _errorMessage = '';
   int _currentTabIndex = 0;
@@ -111,7 +111,7 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
       final response = await _attendanceService.getAttendanceRecords();
       final now = DateTime.now();
       final weekAgo = now.subtract(const Duration(days: 7));
-      
+
       setState(() {
         _allAttendance = response.data.where((record) {
           return record.createDate.isAfter(weekAgo);
@@ -130,7 +130,7 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
       final response = await _attendanceService.getAttendanceRecords();
       final now = DateTime.now();
       final monthAgo = now.subtract(const Duration(days: 30));
-      
+
       setState(() {
         _allAttendance = response.data.where((record) {
           return record.createDate.isAfter(monthAgo);
@@ -260,13 +260,13 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
           'Attendance Records',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFF3371F4),
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: Colors.white,
           tabs: const [
             Tab(text: 'Today'),
             Tab(text: 'Weeks'),
@@ -325,8 +325,74 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
       itemCount: _pendingAttendance.length,
       itemBuilder: (context, index) {
         final record = _pendingAttendance[index];
-        return _buildPendingAttendanceCard(record);
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
+              foregroundColor: Colors.blue.shade800,
+              child: Text(
+                record.employeeName.isNotEmpty ? record.employeeName[0].toUpperCase() : '?',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            title: Text(
+              record.employeeName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              '${record.employeeType} • ${DateFormat('hh:mm a').format(record.checkInTime)}',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => _showAttendanceDetail(record),
+          ),
+        );
       },
+    );
+  }
+
+  void _showAttendanceDetail(PendingAttendance record) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.6,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 50,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                _buildPendingAttendanceCard(record),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -561,6 +627,16 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
     return _buildAttendanceListTab();
   }
 
+  Map<String, List<AttendanceRecord>> _groupAttendanceByEmployee(List<AttendanceRecord> records) {
+    final Map<String, List<AttendanceRecord>> grouped = {};
+    for (final record in records) {
+      final key = record.employeeName.isNotEmpty ? record.employeeName : 'Unknown';
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(record);
+    }
+    return grouped;
+  }
+
   Widget _buildAttendanceListTab() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -583,13 +659,91 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
       return const Center(child: Text('No attendance records found'));
     }
 
+    final grouped = _groupAttendanceByEmployee(_allAttendance);
+    final employeeNames = grouped.keys.toList()..sort();
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _allAttendance.length,
+      itemCount: employeeNames.length,
       itemBuilder: (context, index) {
-        final record = _allAttendance[index];
-        return _buildAttendanceCard(record);
+        final name = employeeNames[index];
+        final records = grouped[name]!;
+        final latestRecord = records.first;
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
+              foregroundColor: Colors.blue.shade800,
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              '${latestRecord.employeeType} • ${DateFormat('dd MMM').format(latestRecord.createDate)}',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => _showAttendanceRecordsForEmployee(name, records),
+          ),
+        );
       },
+    );
+  }
+
+  void _showAttendanceRecordsForEmployee(String name, List<AttendanceRecord> records) {
+    records.sort((a, b) => b.createDate.compareTo(a.createDate));
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.6,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 50,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                Text(
+                  name,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                ...records.map((record) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildAttendanceCard(record),
+                )),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -784,8 +938,71 @@ class _AttendanceScreentHrState extends State<AttendanceScreentHr> with SingleTi
       itemCount: _absentStaff.length,
       itemBuilder: (context, index) {
         final staff = _absentStaff[index];
-        return _buildAbsentStaffCard(staff);
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            leading: CircleAvatar(
+              backgroundColor: Colors.red.shade100,
+              foregroundColor: Colors.red.shade800,
+              child: Text(
+                staff.fullname.isNotEmpty ? staff.fullname[0].toUpperCase() : '?',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            title: Text(staff.fullname, style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              staff.position,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => _showAbsentStaffDetail(staff),
+          ),
+        );
       },
+    );
+  }
+
+  void _showAbsentStaffDetail(AbsentStaff staff) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 50,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                _buildAbsentStaffCard(staff),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

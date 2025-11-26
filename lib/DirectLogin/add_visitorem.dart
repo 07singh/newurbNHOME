@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '/Model/add_visitor.dart';
 import '/service/add_visitor_service.dart';
 import 'package:intl/intl.dart';
@@ -21,26 +22,30 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
   String get _currentDateTime =>
       DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
 
-  void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final visitor = Visitor(
-        name: _nameController.text.trim(),
-        mobileNo: _mobileController.text.trim(),
-        purpose: _purposeController.text.trim(),
-        date: DateTime.now(), // ✅ Always current date-time
-      );
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      bool success = await _service.addVisitor(visitor);
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Visitor added successfully')),
-        );
-        _formKey.currentState!.reset();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add visitor')),
-        );
-      }
+    FocusScope.of(context).unfocus();
+
+    final visitor = Visitor(
+      name: _nameController.text.trim(),
+      mobileNo: _mobileController.text.trim(),
+      purpose: _purposeController.text.trim(),
+      date: DateTime.now(),
+    );
+
+    final success = await _service.addVisitor(visitor);
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Visitor added successfully')),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to add visitor')),
+      );
     }
   }
 
@@ -71,6 +76,7 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
                     labelText: 'Name',
                     border: OutlineInputBorder(
@@ -78,11 +84,24 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                     ),
                     prefixIcon: const Icon(Icons.person),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Enter Name' : null,
+                  validator: (value) {
+                    final trimmed = value?.trim() ?? '';
+                    if (trimmed.isEmpty) return 'Enter name';
+                    if (trimmed.length < 3) return 'Name must be at least 3 characters';
+                    if (!RegExp(r'^[A-Za-z ]+$').hasMatch(trimmed)) {
+                      return 'Name can contain letters and spaces only';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _mobileController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: InputDecoration(
                     labelText: 'Mobile No',
                     border: OutlineInputBorder(
@@ -90,13 +109,17 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                     ),
                     prefixIcon: const Icon(Icons.phone),
                   ),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) =>
-                  value!.isEmpty ? 'Enter Mobile No' : null,
+                  validator: (value) {
+                    final digits = value?.trim() ?? '';
+                    if (digits.isEmpty) return 'Enter mobile number';
+                    if (digits.length != 10) return 'Mobile number must be 10 digits';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _purposeController,
+                  maxLines: 2,
                   decoration: InputDecoration(
                     labelText: 'Purpose',
                     border: OutlineInputBorder(
@@ -104,7 +127,12 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                     ),
                     prefixIcon: const Icon(Icons.note),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Enter Purpose' : null,
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    if (text.isEmpty) return 'Enter purpose';
+                    if (text.length < 4) return 'Purpose must be at least 4 characters';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 24),
                 // ✅ Just show current date-time (no selection)

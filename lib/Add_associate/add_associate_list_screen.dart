@@ -70,11 +70,75 @@ class _AssociateListScreenState extends State<AssociateListScreen> {
               itemCount: associates.length,
               itemBuilder: (context, index) {
                 final associate = associates[index];
-                return _associateCard(associate);
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.amber.shade100,
+                      child: Text(
+                        _initialsOf(associate.fullName),
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                      ),
+                    ),
+                    title: Text(
+                      associate.fullName,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      associate.phone,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _showAssociateDetail(associate),
+                  ),
+                );
               },
             );
           }
         },
+      ),
+    );
+  }
+
+  void _showAssociateDetail(Associate associate) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 50,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                _associateCard(associate),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

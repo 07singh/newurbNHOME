@@ -263,20 +263,20 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                   borderRadius: BorderRadius.circular(8),
                   child: image != null
                       ? Image.file(
-                          image,
-                          fit: BoxFit.cover,
-                        )
+                    image,
+                    fit: BoxFit.cover,
+                  )
                       : _selectedBannerForUpdate != null
-                          ? Image.network(
-                              'https://realapp.cheenu.in${imageNumber == 1 ? _selectedBannerForUpdate!.image1 : imageNumber == 2 ? _selectedBannerForUpdate!.image2 : _selectedBannerForUpdate!.image3}',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Center(
-                                child: Icon(Icons.broken_image, size: 50),
-                              ),
-                            )
-                          : const Center(
-                              child: Icon(Icons.image, size: 50),
-                            ),
+                      ? Image.network(
+                    'https://realapp.cheenu.in${imageNumber == 1 ? _selectedBannerForUpdate!.image1 : imageNumber == 2 ? _selectedBannerForUpdate!.image2 : _selectedBannerForUpdate!.image3}',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(Icons.broken_image, size: 50),
+                    ),
+                  )
+                      : const Center(
+                    child: Icon(Icons.image, size: 50),
+                  ),
                 ),
               )
             else
@@ -380,15 +380,15 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
             child: imageUrl == null
                 ? const Center(child: Icon(Icons.image_not_supported, color: Colors.grey))
                 : ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Center(
-                        child: Icon(Icons.broken_image, color: Colors.red),
-                      ),
-                    ),
-                  ),
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Icon(Icons.broken_image, color: Colors.red),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -441,17 +441,17 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                         ),
                         child: _isLoading
                             ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
                             : Text(
-                                _isUpdateMode ? 'Add Banner (Update)' : 'Add Banner',
-                                style: const TextStyle(fontSize: 16),
-                              ),
+                          _isUpdateMode ? 'Add Banner (Update)' : 'Add Banner',
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ),
                     ),
                     if (_isUpdateMode)
@@ -468,10 +468,10 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                         onPressed: _isFetchingBanner || _isLoading ? null : _loadBannerForUpdate,
                         icon: _isFetchingBanner
                             ? const SizedBox(
-                                height: 16,
-                                width: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                             : const Icon(Icons.update),
                         label: const Text('Update Existing Banner'),
                       ),

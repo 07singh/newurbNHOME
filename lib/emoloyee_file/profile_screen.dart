@@ -141,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.yellow,
+        backgroundColor: Color(0xFFFFD700),
         foregroundColor: Colors.black,
         centerTitle: true,
         title: const Text(
@@ -183,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Container(
                   height: h * 0.15,
-                  color: Colors.yellow,
+                  color:Color(0xFFFFD700),
                 ),
 
                 Transform.translate(

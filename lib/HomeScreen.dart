@@ -7,13 +7,12 @@ import 'DirectLogin/add_visitorem.dart' show AddVisitorScreenem;
 import 'EmployeeDashboard/attendanceHistory.dart';
 import 'EmployeeDashboard/attendance_router.dart';
 import 'EmployeeDashboard/staff_attendance_screen.dart';
-import 'today_flowup_page.dart';
-import 'week_flowup_page.dart';
-import 'total_flowup_page.dart';
 import 'add_header_page.dart';
 import '/sign_page.dart';
-import'/DirectLogin/add_visitor_screen.dart';
-import'/DirectLogin/addVisitorlistforem.dart';
+import '/DirectLogin/add_visitor_screen.dart';
+import '/DirectLogin/addVisitorlistforem.dart';
+import 'today_flowup_page.dart';
+import 'week_flowup_page.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/service/banner_service.dart';
@@ -43,9 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> _bannerImageUrls = [];
   final BannerService _bannerService = BannerService();
   bool _isLoadingBanners = true;
+  bool _isFetchingBanners = false;
 
   int _currentIndex = 0;
+  bool _isRefreshing = false;
   late Timer _timer;
+  Timer? _bannerRefreshTimer;
   final PageController _pageController = PageController();
   final _storage = const FlutterSecureStorage();
   String? _userName;
@@ -75,11 +77,21 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
+    _bannerRefreshTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (!_isFetchingBanners) {
+        _loadBanners(showLoader: false);
+      }
+    });
   }
 
-  Future<void> _loadBanners() async {
+  Future<void> _loadBanners({bool showLoader = true}) async {
+    if (_isFetchingBanners) return;
+
     setState(() {
-      _isLoadingBanners = true;
+      _isFetchingBanners = true;
+      if (showLoader) {
+        _isLoadingBanners = true;
+      }
     });
 
     try {
@@ -88,63 +100,57 @@ class _HomeScreenState extends State<HomeScreen> {
       
       if (response != null && response.banners.isNotEmpty) {
         List<String> imageUrls = [];
-        // Take only the first banner and use its 3 images
-        var firstBanner = response.banners.first;
-        print('Processing banner ID: ${firstBanner.id}');
-        
-        // Helper function to normalize image URL
+
+        // Helper to normalize urls
         String? _normalizeImageUrl(String? imagePath) {
           if (imagePath == null || imagePath.isEmpty || imagePath.toLowerCase() == 'null') {
             return null;
           }
           final trimmed = imagePath.trim();
-          // If already a full URL, return as is
           if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
             return trimmed;
           }
-          // If starts with /, append to base URL
           if (trimmed.startsWith('/')) {
             return 'https://realapp.cheenu.in$trimmed';
           }
-          // Otherwise, add / before the path
           return 'https://realapp.cheenu.in/$trimmed';
         }
-        
-        // Add only the three images from the first banner
-        String? url1 = _normalizeImageUrl(firstBanner.image1);
-        if (url1 != null) {
-          print('Adding image1: $url1');
-          imageUrls.add(url1);
-        }
-        
-        String? url2 = _normalizeImageUrl(firstBanner.image2);
-        if (url2 != null) {
-          print('Adding image2: $url2');
-          imageUrls.add(url2);
-        }
-        
-        String? url3 = _normalizeImageUrl(firstBanner.image3);
-        if (url3 != null) {
-          print('Adding image3: $url3');
-          imageUrls.add(url3);
+
+        // Sort banners so the newest (highest ID) appears first
+        final sortedBanners = [...response.banners]
+          ..sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
+
+        for (final banner in sortedBanners) {
+          if (imageUrls.length >= 3) break;
+          print('Processing banner ID: ${banner.id}');
+          final candidates = [
+            _normalizeImageUrl(banner.image1),
+            _normalizeImageUrl(banner.image2),
+            _normalizeImageUrl(banner.image3),
+          ];
+          for (final url in candidates) {
+            if (url != null && url.isNotEmpty) {
+              imageUrls.add(url);
+              if (imageUrls.length >= 3) break;
+            }
+          }
         }
 
-        print('Total image URLs: ${imageUrls.length}');
+        print('Total latest image URLs collected: ${imageUrls.length}');
         setState(() {
-          _bannerImageUrls.clear();
-          _bannerImageUrls.addAll(imageUrls);
+          _bannerImageUrls
+            ..clear()
+            ..addAll(imageUrls);
           _isLoadingBanners = false;
-          _currentIndex = 0; // Reset to first image
+          _currentIndex = 0;
           if (_bannerImageUrls.isEmpty) {
-            print('No banner images found, using fallback');
-            // Fallback to default images if no banners found
+            print('No banner images found after parsing, using fallback');
             _bannerImageUrls.addAll([
               'assets/imglogo9.png',
               'assets/imglogo8.png',
               'assets/imglogo7.png',
             ]);
           }
-          // Reset PageView to first page
           if (_pageController.hasClients && _bannerImageUrls.isNotEmpty) {
             _pageController.jumpToPage(0);
           }
@@ -182,6 +188,12 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
     }
+    setState(() {
+      _isFetchingBanners = false;
+      if (!showLoader) {
+        _isLoadingBanners = false;
+      }
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -195,6 +207,19 @@ class _HomeScreenState extends State<HomeScreen> {
       _userPhone = phone ?? widget.userPhone ?? '';
       _profileImageUrl = imageUrl ?? widget.profileImageUrl;
     });
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _isRefreshing = true;
+    });
+    await _loadUserData();
+    await _loadBanners();
+    if (mounted) {
+      setState(() {
+        _isRefreshing = false;
+      });
+    }
   }
 
   Future<void> _navigateToProfile() async {
@@ -252,6 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _timer.cancel();
+    _bannerRefreshTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -403,7 +429,24 @@ class _HomeScreenState extends State<HomeScreen> {
           "Employee Dashboard",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        centerTitle: true,
         backgroundColor: Colors.deepPurple,
+        actions: [
+          IconButton(
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _isRefreshing ? null : _handleRefresh,
+            tooltip: "Refresh",
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -613,8 +656,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildFlowUpButton(
                     context,
-                    "Today's Follow-up",
-                    Icons.today_rounded,
+                    "Add Follow-up",
+                    Icons.add_task_rounded,
                     Colors.deepPurple,
                     LinearGradient(colors: [Colors.deepPurple, Colors.purple]),
                     TodayFollowupFormPage(),
@@ -622,8 +665,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 12),
                   _buildFlowUpButton(
                     context,
-                    "This Week Follow-up",
-                    Icons.calendar_view_week_rounded,
+                    "View Follow-up",
+                    Icons.visibility_rounded,
                     Colors.blue,
                     LinearGradient(colors: [Colors.blue, Colors.lightBlueAccent]),
                     WeekFlowupPage(),
@@ -631,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 12),
                   _buildFlowUpButton(
                     context,
-                    "Add Visitor list",
+                    "View Visitor List",
                     Icons.list_alt_rounded,
                     Colors.green,
                     LinearGradient(colors: [Colors.green, Colors.lightGreen]),
@@ -645,6 +688,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Colors.orange,
                     LinearGradient(colors: [Colors.orange, Colors.deepOrange]),
                     AddVisitorScreenem(),
+                    onAfterPop: () async {
+                      await _loadUserData();
+                      await _loadBanners(showLoader: false);
+                    },
                   ),
                 ],
               ),
@@ -688,7 +735,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Color color,
       Gradient gradient,
       Widget page,
-      ) {
+      {Future<void> Function()? onAfterPop}) {
     return Card(
       elevation: 4,
       shadowColor: color.withOpacity(0.3),
@@ -703,8 +750,11 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+              if (onAfterPop != null && mounted) {
+                await onAfterPop();
+              }
             },
             child: Container(
               padding: const EdgeInsets.all(16),

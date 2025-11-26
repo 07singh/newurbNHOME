@@ -23,7 +23,6 @@ import '/Model/profile_model.dart';
 import '/screens/banner_management_screen.dart';
 import '/Employ.dart';
 import 'HrAddNotifation.dart';
-import 'LeavePage.dart';
 import 'PaymentHistoryScreen.dart';
 import'/ChangePasswordScreenhr.dart';
 import '/DirectLogin/add_day_bookhr.dart';
@@ -457,7 +456,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Good Morning, ${widget.userName}!",
+                  "Hello, ${widget.userName}!",
                   style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
@@ -654,10 +653,6 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
 
               // UPDATED: 2 -> Staff List
               _buildActionButton("Staff List", Icons.people_alt_rounded, Colors.green, StaffListScreenhr()),
-              const SizedBox(width: 12),
-
-              // UPDATED: 3 -> Leave Page
-              _buildActionButton("Leave Page", Icons.beach_access_rounded, Colors.orange, LeavePage()),
               const SizedBox(width: 12),
 
               // Rest unchanged

@@ -89,8 +89,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
             pickedTime.hour,
             pickedTime.minute,
           );
-          _dateTimeController.text =
-              DateFormat('yyyy-MM-ddTHH:mm:ss').format(_selectedDateTime);
+          _dateTimeController.text = DateFormat('yyyy-MM-ddTHH:mm:ss').format(_selectedDateTime);
         });
       }
     }
@@ -189,8 +188,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
             borderSide: BorderSide.none,
           ),
         ),
-        validator: validator ?? ((value) =>
-        value == null || value.isEmpty ? 'Required field' : null),
+        validator: validator ?? ((value) => value == null || value.isEmpty ? 'Required field' : null),
       ),
     );
   }
@@ -210,6 +208,10 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
+
+        // 🔥 Back arrow color set to BLACK
+        iconTheme: const IconThemeData(color: Colors.black),
+
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -261,7 +263,6 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter phone number';
                       }
-                      // Allow any phone number format (10 digits minimum)
                       final phoneRegex = RegExp(r'^[0-9]{10,}$');
                       if (!phoneRegex.hasMatch(value.replaceAll(RegExp(r'[\s\-\(\)]'), ''))) {
                         return 'Please enter a valid mobile number';
@@ -305,10 +306,10 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                       items: _paymentModes
                           .map(
                             (mode) => DropdownMenuItem(
-                              value: mode,
-                              child: Text(mode),
-                            ),
-                          )
+                          value: mode,
+                          child: Text(mode),
+                        ),
+                      )
                           .toList(),
                       onChanged: (value) {
                         if (value == null) return;
@@ -340,8 +341,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                       onChanged: (value) {
                         setState(() => _selectedPurpose = value);
                       },
-                      validator: (value) =>
-                      value == null ? 'Please select purpose' : null,
+                      validator: (value) => value == null ? 'Please select purpose' : null,
                     ),
                   ),
                   _inputField(
@@ -380,8 +380,7 @@ class _AddDayBookScreenState extends State<AddDayBookScreen> {
                             ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.upload,
-                                size: 40, color: Color(0xFFFFD700)),
+                            Icon(Icons.upload, size: 40, color: Color(0xFFFFD700)),
                             SizedBox(height: 6),
                             Text("Tap to Upload")
                           ],

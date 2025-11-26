@@ -45,7 +45,12 @@ class _VisitorListScreenState extends State<VisitorListScreenem> {
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No visitors found'));
           } else {
-            final visitors = snapshot.data!;
+            final visitors = [...snapshot.data!];
+            visitors.sort((a, b) {
+              final dateA = a.date ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final dateB = b.date ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return dateB.compareTo(dateA);
+            });
             return ListView.builder(
               itemCount: visitors.length,
               itemBuilder: (context, index) {

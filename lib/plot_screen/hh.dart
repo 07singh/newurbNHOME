@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../Model/associate_model.dart';
+import '../service/associate_list_service.dart';
 import '../service/auth_manager.dart';
 
 enum AreaUnit { sqYds, sqFt }
@@ -425,9 +427,9 @@ class _PlotScreenState extends State<PlotScreen> {
       );
       return;
     }
-    
+
     final plot = plots[plotId]!;
-    
+
     // Don't open dialog if plot is already booked or sold out
     if (plot.bookingStatus == BookingStatus.booked || plot.bookingStatus == BookingStatus.sellout) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -438,7 +440,7 @@ class _PlotScreenState extends State<PlotScreen> {
       );
       return;
     }
-    
+
     showDialog(
       context: context,
       builder: (context) => BookingDialog(
@@ -471,8 +473,8 @@ class _PlotScreenState extends State<PlotScreen> {
     final plot = plots[plotId]!;
     final isLarge = ['76', '79', '82', '85', '88', '91'].contains(plotId);
     final meas = _measurements[plotId];
-    final isBookedOrSoldOut = plot.bookingStatus == BookingStatus.booked || 
-                              plot.bookingStatus == BookingStatus.sellout;
+    final isBookedOrSoldOut = plot.bookingStatus == BookingStatus.booked ||
+        plot.bookingStatus == BookingStatus.sellout;
     return GestureDetector(
       onTap: isBookedOrSoldOut ? null : () => _showBookingDialog(plotId),
       child: Container(
@@ -1090,6 +1092,7 @@ class _BookingDialogState extends State<BookingDialog> {
   late TextEditingController _dealerPhoneController;
   late TextEditingController _bookingDateController;
   late TextEditingController _plotTypeController;
+  late TextEditingController _commissionController;
 
   bool _status = true;
   File? _uploadedPhoto;
@@ -1110,12 +1113,20 @@ class _BookingDialogState extends State<BookingDialog> {
     'RTGS'
   ];
   String _selectedPaidThrough = 'Online Transfer';
+  final AssociateService _associateService = AssociateService();
+  List<Associate> _associates = [];
+  bool _isLoadingAssociates = false;
+  Associate? _selectedAssociate;
+  double _selectedCommissionRate = 0;
+  double _calculatedCommissionAmount = 0;
 
   @override
   void initState() {
     super.initState();
+    _commissionController = TextEditingController(text: '0');
     _initializeControllers();
     _loadUserData();
+    _fetchAssociates();
   }
 
   void _initializeControllers() {
@@ -1178,6 +1189,24 @@ class _BookingDialogState extends State<BookingDialog> {
     }
   }
 
+  Future<void> _fetchAssociates() async {
+    if (_isLoadingAssociates) return;
+    setState(() => _isLoadingAssociates = true);
+
+    try {
+      final associates = await _associateService.fetchAssociates();
+      setState(() {
+        _associates = associates;
+      });
+    } catch (e) {
+      print('Error fetching associates: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingAssociates = false);
+      }
+    }
+  }
+
   void _updateRemainingArea() {
     final total = double.tryParse(_areaController.text) ?? 0;
     final booked = double.tryParse(_bookedAreaController.text) ?? 0;
@@ -1190,16 +1219,30 @@ class _BookingDialogState extends State<BookingDialog> {
     });
   }
 
-  void _updateTotalAmount() {
+  void _updateTotalAmount({bool updateCommission = true}) {
     final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0;
     final bookedArea = double.tryParse(_bookedAreaController.text) ?? 0;
     final unitFactor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
     final bookedInYds = bookedArea * unitFactor;
 
+    final total = purchasePrice * bookedInYds;
+    final receiving = double.tryParse(_receivingController.text) ?? 0;
+    final pendingText = (total - receiving).toStringAsFixed(0);
+
+    double commissionAmount = _calculatedCommissionAmount;
+    if (updateCommission) {
+      final netRate = purchasePrice - _selectedCommissionRate;
+      commissionAmount = netRate * bookedArea;
+      if (commissionAmount < 0) commissionAmount = 0;
+    }
+
     setState(() {
-      _totalAmount = purchasePrice * bookedInYds;
-      final receiving = double.tryParse(_receivingController.text) ?? 0;
-      _pendingController.text = (_totalAmount - receiving).toStringAsFixed(0);
+      _totalAmount = total;
+      _pendingController.text = pendingText;
+      if (updateCommission) {
+        _calculatedCommissionAmount = commissionAmount;
+        _commissionController.text = _selectedCommissionRate.toStringAsFixed(0);
+      }
     });
   }
 
@@ -1377,6 +1420,68 @@ class _BookingDialogState extends State<BookingDialog> {
     );
   }
 
+  Widget _buildAssociateDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<Associate>(
+        value: _selectedAssociate,
+        decoration: const InputDecoration(
+          labelText: 'Select Associate',
+          border: OutlineInputBorder(),
+          prefixIcon: Icon(Icons.person_search),
+        ),
+        items: _associates
+            .map((associate) => DropdownMenuItem(
+                  value: associate,
+                  child: Text(associate.fullName),
+                ))
+            .toList(),
+        onChanged: _isLoadingAssociates ? null : _selectAssociate,
+        hint: Text(_isLoadingAssociates ? 'Loading associates...' : 'Select Associate'),
+      ),
+    );
+  }
+
+  void _selectAssociate(Associate? associate) {
+    setState(() {
+      _selectedAssociate = associate;
+      if (associate != null) {
+        _bookedByController.text = associate.fullName;
+        _dealerPhoneController.text = associate.phone;
+        _selectedCommissionRate = _determineCommissionRate(associate, _projectController.text);
+      } else {
+        _selectedCommissionRate = 0;
+      }
+    });
+    _updateTotalAmount();
+  }
+
+  void _refreshCommissionFromProject() {
+    if (_selectedAssociate == null) return;
+    final rate = _determineCommissionRate(_selectedAssociate!, _projectController.text);
+    if (rate != _selectedCommissionRate) {
+      setState(() => _selectedCommissionRate = rate);
+      _updateTotalAmount();
+    }
+  }
+
+  double _determineCommissionRate(Associate associate, String projectName) {
+    final normalizedProject = projectName.trim().toLowerCase();
+    final project1 = associate.projectName1?.trim().toLowerCase() ?? '';
+    final project2 = associate.projectName2?.trim().toLowerCase() ?? '';
+
+    if (project1.isNotEmpty && normalizedProject.contains(project1)) {
+      return (associate.commissionProject1 ?? 0).toDouble();
+    }
+    if (project2.isNotEmpty && normalizedProject.contains(project2)) {
+      return (associate.commissionProject2 ?? 0).toDouble();
+    }
+
+    if ((associate.commissionProject1 ?? 0) > 0) return (associate.commissionProject1 ?? 0).toDouble();
+    if ((associate.commissionProject2 ?? 0) > 0) return (associate.commissionProject2 ?? 0).toDouble();
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery
@@ -1429,6 +1534,7 @@ class _BookingDialogState extends State<BookingDialog> {
                         label: 'Project Name',
                         icon: Icons.apartment,
                         validator: (v) => v!.isEmpty ? 'Required' : null,
+                        onChanged: (_) => _refreshCommissionFromProject(),
                       ),
                       _buildTextField(
                         controller: _plotTypeController,
@@ -1452,20 +1558,27 @@ class _BookingDialogState extends State<BookingDialog> {
                             ? '10 digits required'
                             : null,
                       ),
+                      _buildAssociateDropdown(),
                       _buildTextField(
                         controller: _bookedByController,
-                        label: 'Booked By Dealer',
+                        label: 'Associate Name',
                         icon: Icons.person_pin,
                       ),
                       _buildTextField(
                         controller: _dealerPhoneController,
-                        label: 'Dealer Phone',
+                        label: 'Associate Phone',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
                         validator: (v) =>
                         v!.isEmpty || v.length != 10
                             ? '10 digits required'
                             : null,
+                      ),
+                      _buildTextField(
+                        controller: _commissionController,
+                        label: 'Associate Commission Rate (₹)',
+                        icon: Icons.attach_money,
+                        readOnly: true,
                       ),
 
                       // Plot Area (Fixed – not editable)
@@ -1577,6 +1690,15 @@ class _BookingDialogState extends State<BookingDialog> {
                           'Total Amount: ₹${_totalAmount.toStringAsFixed(0)}',
                           style: const TextStyle(fontSize: 16,
                               fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'Associate Commission Amount: ₹${_calculatedCommissionAmount.toStringAsFixed(0)}',
+                          style: TextStyle(fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700),
                         ),
                       ),
 
@@ -1748,6 +1870,7 @@ class _BookingDialogState extends State<BookingDialog> {
                                   DateTime.parse(_bookingDateController.text);
                               localPlot.plotType = _plotTypeController.text;
                               localPlot.status = _status;
+                              localPlot.bookingStatus = BookingStatus.pending;
 
 // जरूरी: अपडेट के बाद recalculation
                               localPlot.updateCalculations(

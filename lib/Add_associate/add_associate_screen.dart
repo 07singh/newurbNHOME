@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:flutter/services.dart';
 import 'package:testsd_app/service/add_associate_service.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -199,7 +200,7 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Add New Associate", style: TextStyle(color: Colors.black)),
+        title: const Text("Add New Associate", style: TextStyle(color: Colors.black,fontWeight: FontWeight.w700,)),
         centerTitle: true,
         backgroundColor: const Color(0xFFFFD700),
         iconTheme: const IconThemeData(color: Colors.black),
@@ -433,19 +434,93 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
   }
 
   Widget _textField(String key, String hint, {bool obscure = false}) {
+    final isPhoneField = key == "Phone";
+    final isAadhaarField = key == "AadhaarNo";
+    final isPanField = key == "PanNo";
+    final isPincodeField = key == "Pincode";
+    final isCurrentAddress = key == "CurrentAddress";
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         controller: _controllers[key],
         obscureText: obscure,
+        keyboardType: (isPhoneField || isAadhaarField || isPincodeField)
+            ? TextInputType.number
+            : (obscure ? TextInputType.visiblePassword : TextInputType.text),
+        inputFormatters: [
+          if (isPhoneField || isAadhaarField || isPincodeField)
+            FilteringTextInputFormatter.digitsOnly,
+          if (isPhoneField) LengthLimitingTextInputFormatter(10),
+          if (isAadhaarField) LengthLimitingTextInputFormatter(12),
+          if (isPincodeField) LengthLimitingTextInputFormatter(6),
+        ],
+        onChanged: (value) {
+          if (key == "FullName" && value.isNotEmpty) {
+            final formatted = _capitalizeName(value);
+            if (formatted != value) {
+              _controllers[key]!.value = TextEditingValue(
+                text: formatted,
+                selection: TextSelection.collapsed(offset: formatted.length),
+              );
+            }
+          }
+          if (isPanField && value.isNotEmpty) {
+            final upper = value.toUpperCase();
+            if (upper != value) {
+              _controllers[key]!.value = TextEditingValue(
+                text: upper,
+                selection: TextSelection.collapsed(offset: upper.length),
+              );
+            }
+          }
+        },
         decoration: InputDecoration(
           labelText: AppConstants.fieldLabels[key],
           hintText: hint,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        validator: (v) => v == null || v.isEmpty
-            ? "Please enter ${AppConstants.fieldLabels[key]}"
-            : null,
+        validator: (v) {
+          if (v == null || v.trim().isEmpty) {
+            return "Please enter ${AppConstants.fieldLabels[key]}";
+          }
+          final value = v.trim();
+          if (key == "FullName") {
+            if (!_startsWithCapital(value)) {
+              return "Full Name must start with a capital letter";
+            }
+          }
+          if (isCurrentAddress) {
+            if (!_hasMaxWordCount(value, 30)) {
+              return "Current Address must be within 30 words";
+            }
+          }
+          if (isPhoneField) {
+            if (value.length != 10) {
+              return "Phone number must be exactly 10 digits";
+            }
+          }
+          if (isAadhaarField) {
+            if (value.length != 12) {
+              return "Aadhaar number must be exactly 12 digits";
+            }
+          }
+          if (isPanField) {
+            if (!_isValidPan(value)) {
+              return "PAN number must be 10 characters (e.g., ABCDE1234F)";
+            }
+          }
+          if (isPincodeField) {
+            if (value.length != 6) {
+              return "Pincode must be exactly 6 digits";
+            }
+          }
+          if (key == "Email") {
+            if (!_isValidEmail(value)) {
+              return "Please enter a valid email address";
+            }
+          }
+          return null;
+        },
       ),
     );
   }
@@ -469,5 +544,37 @@ class _AddAssociateScreenState extends State<AddAssociateScreen> {
         const Text("Upload Profile Picture"),
       ],
     );
+  }
+
+  String _capitalizeName(String value) {
+    if (value.isEmpty) return value;
+    final cleaned = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final words = cleaned.split(' ');
+    final capitalized = words
+        .map((word) => word.isEmpty
+            ? word
+            : word[0].toUpperCase() + (word.length > 1 ? word.substring(1) : ''))
+        .join(' ');
+    return capitalized;
+  }
+
+  bool _startsWithCapital(String value) {
+    if (value.isEmpty) return false;
+    return RegExp(r'^[A-Z]').hasMatch(value);
+  }
+
+  bool _hasMaxWordCount(String value, int maxWords) {
+    final words = value.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+    return words.length <= maxWords;
+  }
+
+  bool _isValidPan(String value) {
+    final panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]$');
+    return panRegex.hasMatch(value);
+  }
+
+  bool _isValidEmail(String value) {
+    final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$');
+    return emailRegex.hasMatch(value);
   }
 }

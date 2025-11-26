@@ -495,11 +495,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
             decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.star, color: Colors.yellow.shade400, size: 16),
-                const SizedBox(width: 4),
-                Text("4.8 Rating", style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.w500)),
-              ],
+
             ),
           ),
         ],

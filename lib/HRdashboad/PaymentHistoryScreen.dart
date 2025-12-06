@@ -29,7 +29,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       errorMessage = null;
     });
 
-    const url = "https://realapp.cheenu.in/Api/GetBookingSummaryIndividual";
+    const url = "https://realapp.cheenu.in/Api/GetBookingSummary";
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {

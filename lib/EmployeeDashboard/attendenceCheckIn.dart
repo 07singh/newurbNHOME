@@ -407,23 +407,23 @@ class _AttendanceCheckInState extends State<AttendanceCheckIn> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF6B46FF)),
           onPressed: _isCheckingIn ? null : () => Navigator.pop(context),
         ),
         centerTitle: true,
         title: const Text(
           'Attendance',
           style: TextStyle(
-            color: Colors.white,
+            color: Color(0xFF6B46FF),
             fontWeight: FontWeight.w600,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: const Icon(Icons.refresh, color: Color(0xFF6B46FF)),
             onPressed: _isCheckingIn ? null : _initLocation,
             tooltip: 'Refresh Location',
           ),

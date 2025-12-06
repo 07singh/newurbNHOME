@@ -87,9 +87,7 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                   validator: (value) {
                     final trimmed = value?.trim() ?? '';
                     if (trimmed.isEmpty) return 'Enter name';
-                    if (trimmed.length < 3) {
-                      return 'Name must be at least 3 characters';
-                    }
+                    if (trimmed.length < 3) return 'Name must be at least 3 characters';
                     if (!RegExp(r'^[A-Za-z ]+$').hasMatch(trimmed)) {
                       return 'Name can contain letters and spaces only';
                     }
@@ -105,26 +103,16 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                     LengthLimitingTextInputFormatter(10),
                   ],
                   decoration: InputDecoration(
-                    labelText: 'Mobile No (Optional)',
+                    labelText: 'Mobile No',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     prefixIcon: const Icon(Icons.phone),
                   ),
-
-                  /// *** UPDATED VALIDATOR (Mobile Optional) ***
                   validator: (value) {
                     final digits = value?.trim() ?? '';
-
-                    // Phone empty? → Allow
-                    if (digits.isEmpty) {
-                      return null;
-                    }
-
-                    // If entered, must be 10 digits
-                    if (digits.length != 10) {
-                      return 'Mobile number must be 10 digits';
-                    }
+                    if (digits.isEmpty) return 'Enter mobile number';
+                    if (digits.length != 10) return 'Mobile number must be 10 digits';
                     return null;
                   },
                 ),
@@ -142,14 +130,12 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.isEmpty) return 'Enter purpose';
-                    if (text.length < 4) {
-                      return 'Purpose must be at least 4 characters';
-                    }
+                    if (text.length < 4) return 'Purpose must be at least 4 characters';
                     return null;
                   },
                 ),
                 const SizedBox(height: 24),
-
+                // ✅ Just show current date-time (no selection)
                 Row(
                   children: [
                     const Icon(Icons.access_time, color: Colors.deepPurple),
@@ -161,7 +147,6 @@ class _AddVisitorScreenState extends State<AddVisitorScreenem> {
                   ],
                 ),
                 const SizedBox(height: 32),
-
                 ElevatedButton(
                   onPressed: _submit,
                   style: ElevatedButton.styleFrom(

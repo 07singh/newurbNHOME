@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../Model/associate_model.dart';
-import 'plot_refresh_notifier.dart';
 import '../service/associate_list_service.dart';
 import '../service/auth_manager.dart';
 
@@ -505,46 +504,32 @@ class _BookingDialogState extends State<BookingDialog> {
         print('DEBUG: Response body: ${response.body}');
 
         if (response.statusCode == 200 || response.statusCode == 201) {
-          final respJson = response.body.isNotEmpty
-              ? jsonDecode(response.body)
-              : <String, dynamic>{};
-
-          // Backend currently returns: {"message":"Booking added successfully"}
-          // without a "status" field. Treat any 200/201 as success and just
-          // show whatever message is present.
-          final successMessage = (respJson['message'] ??
-                  respJson['Message'] ??
-                  'Booking saved!')
-              .toString();
-          final remainingArea =
-              respJson['remaining_area'] != null ? respJson['remaining_area'] : null;
-
-          if (!mounted) return response;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                remainingArea != null
-                    ? '$successMessage (Remaining: $remainingArea)'
-                    : successMessage,
+          final respJson = jsonDecode(response.body);
+          if (respJson['status'] == 'Success') {
+            if (!mounted) return response;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${respJson['message'] ?? 'Booking saved!'} '
+                      '(Remaining: ${respJson['remaining_area']})',
+                ),
+                backgroundColor: Colors.green,
               ),
-              backgroundColor: Colors.green,
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-            _isSubmitEnabled = true;
-          });
-          Navigator.of(context).pop();
-          return response;
+            );
+            setState(() {
+              _isLoading = false;
+              _isSubmitEnabled = true;
+            });
+            Navigator.of(context).pop();
+            return response;
+          } else {
+            throw Exception(
+                'Server said: ${respJson['message'] ?? 'Unknown error'}');
+          }
         } else {
-          final respJson = response.body.isNotEmpty
-              ? jsonDecode(response.body)
-              : <String, dynamic>{};
-          // Some APIs return {"Message": "..."} with capital M
-          final error = (respJson['message'] ??
-                  respJson['Message'] ??
-                  'Server error: ${response.statusCode}')
-              .toString();
+          final respJson = jsonDecode(response.body);
+          final error =
+              respJson['message'] ?? 'Server error: ${response.statusCode}';
           if (!mounted) return Future.error(error);
           setState(() => _lastErrorMessage = error);
           print('DEBUG: Server returned error: $error');
@@ -1057,18 +1042,13 @@ class _PlotLayoutScreenState extends State<PlotLayoutScreen> {
   late Map<String, PlotInfo> plots;
   bool _isLoading = false;
   String? _errorMessage;
-  final String projectName = 'Defence Phase 2';
-  late final VoidCallback _plotRefreshListener;
+  final String projectName = 'Defence phase 2';
 
   @override
   void initState() {
     super.initState();
     _initializePlots();
     _fetchPlotData();
-    _plotRefreshListener = () {
-      if (mounted) _fetchPlotData();
-    };
-    PlotRefreshNotifier.instance.addListener(_plotRefreshListener);
   }
 
   void _initializePlots() {
@@ -1776,7 +1756,6 @@ class _PlotLayoutScreenState extends State<PlotLayoutScreen> {
 
   @override
   void dispose() {
-    PlotRefreshNotifier.instance.removeListener(_plotRefreshListener);
     _transformationController.dispose();
     super.dispose();
   }

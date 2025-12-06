@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../Model/associate_model.dart';
-import 'plot_refresh_notifier.dart';
 import '../service/associate_list_service.dart';
 import '../service/auth_manager.dart';
 
@@ -33,7 +32,6 @@ class PlotInfo {
   bool status = true;
   BookingStatus bookingStatus = BookingStatus.available;
   String plotType;
-
 
   // मुख्य कंस्ट्रक्टर
   PlotInfo({
@@ -261,8 +259,6 @@ extension StringExtension on String {
 
 
 
-
-
 class PlotScreen extends StatefulWidget {
   const PlotScreen({Key? key}) : super(key: key);
   @override
@@ -274,18 +270,13 @@ class _PlotScreenState extends State<PlotScreen> {
   late Map<String, PlotInfo> plots;
   bool _isLoading = false;
   String? _errorMessage;
-  final String projectName = 'Green Residency Phase 2';
-  late final VoidCallback _plotRefreshListener;
+  final String projectName = 'Green residency phase 2';
 
   @override
   void initState() {
     super.initState();
     _initializePlots();
     _fetchPlotData();
-    _plotRefreshListener = () {
-      if (mounted) _fetchPlotData();
-    };
-    PlotRefreshNotifier.instance.addListener(_plotRefreshListener);
   }
 
   void _initializePlots() {
@@ -332,7 +323,6 @@ class _PlotScreenState extends State<PlotScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       await Future.wait([
         _fetchPending(),
@@ -1072,7 +1062,6 @@ class _PlotScreenState extends State<PlotScreen> {
 
   @override
   void dispose() {
-    PlotRefreshNotifier.instance.removeListener(_plotRefreshListener);
     _transformationController.dispose();
     super.dispose();
   }
@@ -1093,8 +1082,8 @@ class _BookingDialogState extends State<BookingDialog> {
   late TextEditingController _areaController;
   late TextEditingController _bookedAreaController;
   late TextEditingController _remainingAreaController;
-  late TextEditingController _purchasePriceController;
-  late TextEditingController _receivingController;
+  late TextEditingController _purchasePriceController; // ← was fare
+  late TextEditingController _receivingController; // ← was paid
   late TextEditingController _projectController;
   late TextEditingController _pendingController;
   late TextEditingController _paidThroughController;
@@ -1115,7 +1104,14 @@ class _BookingDialogState extends State<BookingDialog> {
   final _formKey = GlobalKey<FormState>();
   double _totalAmount = 0;
 
-  final List<String> _paidThroughOptions = ['Cash', 'Online Transfer', 'Cheque','RTGS','NEFT'];
+  // Dropdown options
+  final List<String> _paidThroughOptions = [
+    'Cash',
+    'Online Transfer',
+    'Cheque',
+    'NEFT',
+    'RTGS'
+  ];
   String _selectedPaidThrough = 'Online Transfer';
   final AssociateService _associateService = AssociateService();
   List<Associate> _associates = [];
@@ -1138,25 +1134,35 @@ class _BookingDialogState extends State<BookingDialog> {
 
     _clientController = TextEditingController(text: widget.plot.clientName);
     _areaController = TextEditingController(text: totalArea.toStringAsFixed(0));
-    _bookedAreaController = TextEditingController(text: widget.plot.bookedArea.toStringAsFixed(0));
+    _bookedAreaController =
+        TextEditingController(text: widget.plot.bookedArea.toStringAsFixed(0));
     _remainingAreaController = TextEditingController(
       text: (totalArea - widget.plot.bookedArea).toStringAsFixed(0),
     );
-    _purchasePriceController = TextEditingController(text: widget.plot.fare.toStringAsFixed(0));
-    _receivingController = TextEditingController(text: widget.plot.paidAmount.toStringAsFixed(0));
+    _purchasePriceController =
+        TextEditingController(text: widget.plot.fare.toStringAsFixed(0));
+    _receivingController =
+        TextEditingController(text: widget.plot.paidAmount.toStringAsFixed(0));
     _projectController = TextEditingController(text: widget.plot.projectName);
-    _pendingController = TextEditingController(text: widget.plot.pendingAmount.toStringAsFixed(0));
-    _paidThroughController = TextEditingController(text: widget.plot.paidThrough);
-    _bookedByController = TextEditingController(text: widget.plot.bookedByDealer);
-    _customerPhoneController = TextEditingController(text: widget.plot.customerPhone);
-    _dealerPhoneController = TextEditingController(text: widget.plot.dealerPhone);
+    _pendingController = TextEditingController(
+        text: widget.plot.pendingAmount.toStringAsFixed(0));
+    _paidThroughController =
+        TextEditingController(text: widget.plot.paidThrough);
+    _bookedByController =
+        TextEditingController(text: widget.plot.bookedByDealer);
+    _customerPhoneController =
+        TextEditingController(text: widget.plot.customerPhone);
+    _dealerPhoneController =
+        TextEditingController(text: widget.plot.dealerPhone);
     _bookingDateController = TextEditingController(
       text: widget.plot.bookingDate.toIso8601String().split('T')[0],
     );
     _plotTypeController = TextEditingController(text: widget.plot.plotType);
     _status = widget.plot.status;
     _areaUnit = widget.plot.areaUnit;
-    _selectedPaidThrough = widget.plot.paidThrough.isNotEmpty ? widget.plot.paidThrough : 'Online Transfer';
+    _selectedPaidThrough = widget.plot.paidThrough.isNotEmpty
+        ? widget.plot.paidThrough
+        : 'Online Transfer';
 
     _updateTotalAmount();
   }
@@ -1201,7 +1207,6 @@ class _BookingDialogState extends State<BookingDialog> {
     }
   }
 
-  // FIXED: Sync area string when unit changes
   void _updateRemainingArea() {
     final total = double.tryParse(_areaController.text) ?? 0;
     final booked = double.tryParse(_bookedAreaController.text) ?? 0;
@@ -1211,8 +1216,6 @@ class _BookingDialogState extends State<BookingDialog> {
 
     setState(() {
       _remainingAreaController.text = remaining.toStringAsFixed(0);
-      // CRITICAL FIX: Keep area string in sync with current unit
-      _areaController.text = total.toStringAsFixed(0);
     });
   }
 
@@ -1250,7 +1253,8 @@ class _BookingDialogState extends State<BookingDialog> {
       final fileSize = await File(image.path).length();
       if (fileSize > 5 * 1024 * 1024) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image size exceeds 5MB'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('Image size exceeds 5MB'),
+              backgroundColor: Colors.red),
         );
         return;
       }
@@ -1324,46 +1328,32 @@ class _BookingDialogState extends State<BookingDialog> {
         print('DEBUG: Response body: ${response.body}');
 
         if (response.statusCode == 200 || response.statusCode == 201) {
-          final respJson = response.body.isNotEmpty
-              ? jsonDecode(response.body)
-              : <String, dynamic>{};
-
-          // Backend currently returns: {"message":"Booking added successfully"}
-          // without a "status" field. Treat any 200/201 as success and just
-          // show whatever message is present.
-          final successMessage = (respJson['message'] ??
-                  respJson['Message'] ??
-                  'Booking saved!')
-              .toString();
-          final remainingArea =
-              respJson['remaining_area'] != null ? respJson['remaining_area'] : null;
-
-          if (!mounted) return response;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                remainingArea != null
-                    ? '$successMessage (Remaining: $remainingArea)'
-                    : successMessage,
+          final respJson = jsonDecode(response.body);
+          if (respJson['status'] == 'Success') {
+            if (!mounted) return response;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${respJson['message'] ?? 'Booking saved!'} '
+                      '(Remaining: ${respJson['remaining_area']})',
+                ),
+                backgroundColor: Colors.green,
               ),
-              backgroundColor: Colors.green,
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-            _isSubmitEnabled = true;
-          });
-          Navigator.of(context).pop();
-          return response;
+            );
+            setState(() {
+              _isLoading = false;
+              _isSubmitEnabled = true;
+            });
+            Navigator.of(context).pop();
+            return response;
+          } else {
+            throw Exception(
+                'Server said: ${respJson['message'] ?? 'Unknown error'}');
+          }
         } else {
-          final respJson = response.body.isNotEmpty
-              ? jsonDecode(response.body)
-              : <String, dynamic>{};
-          // Some APIs return {"Message": "..."} with capital M
-          final error = (respJson['message'] ??
-                  respJson['Message'] ??
-                  'Server error: ${response.statusCode}')
-              .toString();
+          final respJson = jsonDecode(response.body);
+          final error =
+              respJson['message'] ?? 'Server error: ${response.statusCode}';
           if (!mounted) return Future.error(error);
           setState(() => _lastErrorMessage = error);
           print('DEBUG: Server returned error: $error');
@@ -1442,9 +1432,9 @@ class _BookingDialogState extends State<BookingDialog> {
         ),
         items: _associates
             .map((associate) => DropdownMenuItem(
-          value: associate,
-          child: Text(associate.fullName),
-        ))
+                  value: associate,
+                  child: Text(associate.fullName),
+                ))
             .toList(),
         onChanged: _isLoadingAssociates ? null : _selectAssociate,
         hint: Text(_isLoadingAssociates ? 'Loading associates...' : 'Select Associate'),
@@ -1494,7 +1484,9 @@ class _BookingDialogState extends State<BookingDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery
+        .of(context)
+        .size;
     final dialogWidth = screenSize.width * 0.9;
     final dialogMaxHeight = screenSize.height * 0.85;
 
@@ -1518,7 +1510,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         children: [
                           Text(
                             'Plot ${widget.plot.id} - Booking',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
@@ -1530,7 +1523,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         const SizedBox(height: 8),
                         Text(
                           'Last Error: $_lastErrorMessage',
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
+                          style: const TextStyle(
+                              color: Colors.red, fontSize: 14),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -1559,7 +1553,10 @@ class _BookingDialogState extends State<BookingDialog> {
                         label: 'Customer Phone',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
-                        validator: (v) => v!.length != 10 ? '10 digits required' : null,
+                        validator: (v) =>
+                        v!.length != 10
+                            ? '10 digits required'
+                            : null,
                       ),
                       _buildAssociateDropdown(),
                       _buildTextField(
@@ -1572,7 +1569,10 @@ class _BookingDialogState extends State<BookingDialog> {
                         label: 'Associate Phone',
                         icon: Icons.phone,
                         keyboardType: TextInputType.phone,
-                        validator: (v) => v!.isEmpty || v.length != 10 ? '10 digits required' : null,
+                        validator: (v) =>
+                        v!.isEmpty || v.length != 10
+                            ? '10 digits required'
+                            : null,
                       ),
                       _buildTextField(
                         controller: _commissionController,
@@ -1590,23 +1590,28 @@ class _BookingDialogState extends State<BookingDialog> {
                               label: 'Plot Area',
                               icon: Icons.square_foot,
                               readOnly: true,
-                              validator: (v) => (double.tryParse(v!) ?? 0) <= 0 ? 'Invalid' : null,
+                              validator: (v) =>
+                              (double.tryParse(v!) ?? 0) <= 0
+                                  ? 'Invalid'
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 8),
                           DropdownButton<AreaUnit>(
                             value: _areaUnit,
                             items: AreaUnit.values
-                                .map((u) => DropdownMenuItem(
-                              value: u,
-                              child: Text(u == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
-                            ))
+                                .map((u) =>
+                                DropdownMenuItem(
+                                  value: u,
+                                  child: Text(
+                                      u == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
+                                ))
                                 .toList(),
                             onChanged: (v) {
                               if (v != null) {
                                 setState(() {
                                   _areaUnit = v;
-                                  _updateRemainingArea(); // Now syncs area string
+                                  _updateRemainingArea();
                                   _updateTotalAmount();
                                 });
                               }
@@ -1630,15 +1635,20 @@ class _BookingDialogState extends State<BookingDialog> {
                               },
                               validator: (v) {
                                 final booked = double.tryParse(v!) ?? 0;
-                                final total = double.tryParse(_areaController.text) ?? 0;
-                                final factor = _areaUnit == AreaUnit.sqFt ? 1 / 9.0 : 1.0;
-                                if (booked > total * factor) return 'Exceeds total';
+                                final total = double.tryParse(
+                                    _areaController.text) ?? 0;
+                                final factor = _areaUnit == AreaUnit.sqFt ? 1 /
+                                    9.0 : 1.0;
+                                if (booked > total * factor)
+                                  return 'Exceeds total';
                                 return null;
                               },
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
+                          Text(_areaUnit == AreaUnit.sqYds
+                              ? 'Sq.Yds'
+                              : 'sq ft'),
                         ],
                       ),
 
@@ -1654,7 +1664,9 @@ class _BookingDialogState extends State<BookingDialog> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'),
+                          Text(_areaUnit == AreaUnit.sqYds
+                              ? 'Sq.Yds'
+                              : 'sq ft'),
                         ],
                       ),
 
@@ -1665,7 +1677,10 @@ class _BookingDialogState extends State<BookingDialog> {
                         icon: Icons.currency_rupee,
                         keyboardType: TextInputType.number,
                         onChanged: (_) => _updateTotalAmount(),
-                        validator: (v) => (double.tryParse(v!) ?? 0) <= 0 ? 'Required' : null,
+                        validator: (v) =>
+                        (double.tryParse(v!) ?? 0) <= 0
+                            ? 'Required'
+                            : null,
                       ),
 
                       // Total Amount (Auto)
@@ -1673,14 +1688,17 @@ class _BookingDialogState extends State<BookingDialog> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
                           'Total Amount: ₹${_totalAmount.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontSize: 16,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
                           'Associate Commission Amount: ₹${_calculatedCommissionAmount.toStringAsFixed(0)}',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                          style: TextStyle(fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700),
                         ),
                       ),
 
@@ -1693,7 +1711,8 @@ class _BookingDialogState extends State<BookingDialog> {
                         onChanged: (v) {
                           final rec = double.tryParse(v) ?? 0;
                           setState(() {
-                            _pendingController.text = (_totalAmount - rec).toStringAsFixed(0);
+                            _pendingController.text =
+                                (_totalAmount - rec).toStringAsFixed(0);
                           });
                         },
                         validator: (v) {
@@ -1722,15 +1741,16 @@ class _BookingDialogState extends State<BookingDialog> {
                             prefixIcon: Icon(Icons.payment),
                           ),
                           items: _paidThroughOptions
-                              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                              .map((e) =>
+                              DropdownMenuItem(value: e, child: Text(e)))
                               .toList(),
-                          onChanged: (v) => setState(() => _selectedPaidThrough = v!),
+                          onChanged: (v) =>
+                              setState(() => _selectedPaidThrough = v!),
                           validator: (v) => v == null ? 'Required' : null,
                         ),
                       ),
 
                       // Booking Date + Calendar
-                      // 📅 Booking Date (TextField + Pick Button in same row)
                       Row(
                         children: [
                           Expanded(
@@ -1739,7 +1759,10 @@ class _BookingDialogState extends State<BookingDialog> {
                               label: 'Booking Date',
                               icon: Icons.calendar_today,
                               readOnly: true,
-                              validator: (v) => DateTime.tryParse(v ?? '') == null ? 'Invalid date' : null,
+                              validator: (v) =>
+                              DateTime.tryParse(v ?? '') == null
+                                  ? 'Invalid date'
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1748,7 +1771,8 @@ class _BookingDialogState extends State<BookingDialog> {
                             icon: const Icon(Icons.date_range),
                             label: const Text('Pick'),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 16),
                             ),
                           ),
                         ],
@@ -1760,14 +1784,16 @@ class _BookingDialogState extends State<BookingDialog> {
                           const Text('Status:'),
                           Checkbox(
                             value: _status,
-                            onChanged: (v) => setState(() => _status = v ?? false),
+                            onChanged: (v) =>
+                                setState(() => _status = v ?? false),
                           ),
                           const Text('Active'),
                         ],
                       ),
 
                       const SizedBox(height: 16),
-                      const Text('Upload Photo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('Upload Photo', style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -1793,7 +1819,9 @@ class _BookingDialogState extends State<BookingDialog> {
                           padding: const EdgeInsets.only(top: 12),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(_uploadedPhoto!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                            child: Image.file(_uploadedPhoto!, height: 150,
+                                width: double.infinity,
+                                fit: BoxFit.cover),
                           ),
                         ),
 
@@ -1805,29 +1833,46 @@ class _BookingDialogState extends State<BookingDialog> {
                             if (_formKey.currentState!.validate()) {
                               final localPlot = PlotInfo.clone(widget.plot);
 
-                              final purchasePrice = double.tryParse(_purchasePriceController.text) ?? 0;
-                              final bookedArea = double.tryParse(_bookedAreaController.text) ?? 0;
-                              final totalAmountValue = purchasePrice * (bookedArea / (_areaUnit == AreaUnit.sqFt ? 9.0 : 1.0));
+                              final purchasePrice = double.tryParse(
+                                  _purchasePriceController.text) ?? 0;
+                              final bookedArea = double.tryParse(
+                                  _bookedAreaController.text) ?? 0;
+                              final totalAmountValue = purchasePrice *
+                                  (bookedArea /
+                                      (_areaUnit == AreaUnit.sqFt ? 9.0 : 1.0));
 
+
+// सही तरीके से फील्ड्स अपडेट करें
                               localPlot.clientName = _clientController.text;
                               localPlot.fare = purchasePrice;
                               localPlot.totalAmount = totalAmountValue;
-                              localPlot.receivingAmount = double.tryParse(_receivingController.text) ?? 0;
+                              localPlot.receivingAmount =
+                                  double.tryParse(_receivingController.text) ??
+                                      0; // paidAmount हटाया
                               localPlot.bookedArea = bookedArea;
-                              localPlot.area = '${_areaController.text} ${_areaUnit == AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'}';
+                              localPlot.area =
+                              '${_areaController.text} ${_areaUnit ==
+                                  AreaUnit.sqYds ? 'Sq.Yds' : 'sq ft'}';
                               localPlot.areaUnit = _areaUnit;
                               localPlot.photoPath = _uploadedPhoto?.path;
                               localPlot.projectName = _projectController.text;
-                              localPlot.pendingAmount = totalAmountValue - localPlot.receivingAmount;
+                              localPlot.pendingAmount = totalAmountValue -
+                                  localPlot
+                                      .receivingAmount; // receivingAmount से
                               localPlot.paidThrough = _selectedPaidThrough;
-                              localPlot.bookedByDealer = _bookedByController.text;
-                              localPlot.customerPhone = _customerPhoneController.text;
-                              localPlot.dealerPhone = _dealerPhoneController.text;
-                              localPlot.bookingDate = DateTime.parse(_bookingDateController.text);
+                              localPlot.bookedByDealer =
+                                  _bookedByController.text;
+                              localPlot.customerPhone =
+                                  _customerPhoneController.text;
+                              localPlot.dealerPhone =
+                                  _dealerPhoneController.text;
+                              localPlot.bookingDate =
+                                  DateTime.parse(_bookingDateController.text);
                               localPlot.plotType = _plotTypeController.text;
                               localPlot.status = _status;
                               localPlot.bookingStatus = BookingStatus.pending;
 
+// जरूरी: अपडेट के बाद recalculation
                               localPlot.updateCalculations(
                                 newFare: purchasePrice,
                                 newBookedArea: bookedArea,
@@ -1838,13 +1883,15 @@ class _BookingDialogState extends State<BookingDialog> {
                                 await _submitBookingAPI(localPlot);
                                 widget.onSave(localPlot);
                               } catch (e) {
-                                // Error already shown
+                                // Error already shown in API
                               }
                             }
                           },
                           child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text('Submit Booking', style: TextStyle(fontSize: 16)),
+                              ? const CircularProgressIndicator(
+                              color: Colors.white)
+                              : const Text(
+                              'Submit Booking', style: TextStyle(fontSize: 16)),
                         ),
                       ),
                     ],

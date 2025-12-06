@@ -23,14 +23,11 @@ import '/Model/profile_model.dart';
 import '/screens/banner_management_screen.dart';
 import '/Employ.dart';
 import 'HrAddNotifation.dart';
+import 'PaymentHistoryScreen.dart';
 import'/ChangePasswordScreenhr.dart';
 import '/DirectLogin/add_day_bookhr.dart';
 import '/DirectLogin/add_day_history_screenhr.dart';
 import '/DirectLogin/add_detail_screenhr.dart';
-import '../Add_associate/add_associate_screenhr.dart';
-import '../Add_associate/add_associate_list_screenhr.dart';
-import'/screens/banner_management_screenhr.dart';
-import '../Add_associate/FOLLOW_UP_HR.dart';
 
 class HRDashboardPage extends StatefulWidget {
   final String userName;
@@ -300,8 +297,18 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                   ),
                 ),
 
-
-
+                // Attendance Repeat (unchanged)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: ListTile(
+                    leading: Icon(Icons.repeat_rounded, color: Colors.grey.shade500, size: 18),
+                    title: Text("Attendance Repeat", style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showSnackBar(context, "Selected: Attendance Repeat");
+                    },
+                  ),
+                ),
               ],
             ),
 
@@ -369,7 +376,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const BannerManagementScreenhr(),
+                    builder: (context) => const BannerManagementScreen(),
                   ),
                 );
               },
@@ -529,7 +536,7 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
 
   // Add these two variables at the top of the class:
   int pendingBookingCount = 0;
-  int attendanceRecordCount = 0;
+  int paymentHistoryCount = 0;
 
 // Then use this updated widget
   Widget _buildStatsOverview() {
@@ -574,19 +581,19 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
               ),
             ),
 
-            // UPDATED: Card 2 -> Attendance Record (moved from quick actions)
+            // UPDATED: Card 2 -> Payment History (Dynamic)
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AttendanceScreentHr()),
+                  MaterialPageRoute(builder: (context) => PaymentHistoryScreen()),
                 );
               },
               child: _buildStatCard(
-                title: "Attendance Record",
-                value: attendanceRecordCount.toString(),
-                icon: Icons.calendar_today_rounded,
-                color: Colors.green,
+                title: "Payment History",
+                value: paymentHistoryCount.toString(), // DYNAMIC VALUE
+                icon: Icons.payment_rounded,
+                color: Colors.orange,
                 change: "Tap to view",
               ),
             ),
@@ -640,12 +647,11 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildActionButton("Add Associate", Icons.person_add_alt_1, Colors.deepOrange, const AddAssociateScreen()),
+              // UPDATED: 1 -> Attendance Record
+              _buildActionButton("Attendance Record", Icons.calendar_today_rounded, Colors.blue, AttendanceScreentHr()),
               const SizedBox(width: 12),
-              _buildActionButton("Associate List", Icons.list_alt_rounded, Colors.deepPurple, const AssociateListScreen()),
-              const SizedBox(width: 12),
-              _buildActionButton("Follow-ups", Icons.timeline, Colors.deepPurple, WeekFlowupPage()),
-              const SizedBox(width: 12),
+
+              // UPDATED: 2 -> Staff List
               _buildActionButton("Staff List", Icons.people_alt_rounded, Colors.green, StaffListScreenhr()),
               const SizedBox(width: 12),
 
@@ -666,30 +672,23 @@ class _HRDashboardPageState extends State<HRDashboardPage> with SingleTickerProv
   }
 
   Widget _buildActionButton(String title, IconData icon, Color color, Widget screen) {
-    const double cardWidth = 120;
-    const double cardHeight = 120;
-    return SizedBox(
-      width: cardWidth,
-      height: cardHeight,
-      child: GestureDetector(
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => screen)),
-        child: Container(
-          width: cardWidth,
-          height: cardHeight,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 2))],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 30),
-              const SizedBox(height: 8),
-              Text(title, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600)),
-            ],
-          ),
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => screen)),
+      child: Container(
+        width: 120,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 30),
+            const SizedBox(height: 8),
+            Text(title, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600)),
+          ],
         ),
       ),
     );

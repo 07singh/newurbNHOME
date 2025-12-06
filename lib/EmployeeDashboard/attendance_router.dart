@@ -57,20 +57,20 @@ class _AttendanceRouterState extends State<AttendanceRouter> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF6B46FF)),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          centerTitle: true,
+          title: const Text(
+            'Attendance',
+            style: TextStyle(color: Color(0xFF6B46FF), fontWeight: FontWeight.w600),
+          ),
         ),
-        centerTitle: true,
-        title: const Text(
-          'Attendance',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

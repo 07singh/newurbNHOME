@@ -68,10 +68,10 @@ class Payment {
     required this.bookingInfo,
   });
 
-  factory Payment.fromJson(Map<String, dynamic> json, {int? bookingIdOverride}) {
+  factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
       paymentId: json['Payment_Id'] as int? ?? 0,
-      bookingId: json['Booking_Id'] as int? ?? bookingIdOverride ?? 0,
+      bookingId: json['Booking_Id'] as int? ?? 0,
       paidAmount: (json['Paid_Amount'] as num?)?.toDouble() ?? 0.0,
       paidThrough: json['Paid_Through'] as String? ?? '',
       screenshot: json['Screenshot'] as String? ?? '',

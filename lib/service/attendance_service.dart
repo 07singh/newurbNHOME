@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '/Model/attendance_model.dart';
-import '/service/activity_notification_helper.dart';
-import '/service/auth_manager.dart';
 
 /// Service for managing attendance check-in and check-out
 class AttendanceService {
@@ -51,23 +49,6 @@ class AttendanceService {
 
       // Parse response
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Send notification to HR/Director via backend API
-        try {
-          final session = await AuthManager.getCurrentSession();
-          final userId = session != null ? int.tryParse(session.userId ?? '') : null;
-          
-          String actionType = attendance.action ?? 'Both';
-          
-          await ActivityNotificationHelper.notifyAttendanceRecorded(
-            employeeName: attendance.employeeName,
-            action: actionType,
-            location: attendance.checkInLocation ?? 'Location',
-            userId: userId,
-          );
-        } catch (e) {
-          print('⚠️ Error sending attendance notification: $e');
-        }
-
         try {
           final responseData = jsonDecode(response.body);
           return AttendanceResponse.fromJson(responseData);

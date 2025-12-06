@@ -301,7 +301,7 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Select Image'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFFFD700),
+                      backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -400,7 +400,7 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Banner Management'),
-        backgroundColor: Color(0xFFFFD700),
+        backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -435,7 +435,7 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _submitBanner,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:Color(0xFFFFD700),
+                          backgroundColor: Colors.deepPurple,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),

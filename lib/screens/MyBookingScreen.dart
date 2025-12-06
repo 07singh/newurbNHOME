@@ -387,282 +387,192 @@ class _PaymentModalState extends State<PaymentModal> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 10),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Text("Add Payment", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.grey.shade800))),
+          const SizedBox(height: 8),
+          Center(child: Text("For ${widget.booking.customerName}", style: TextStyle(fontSize: 14, color: Colors.grey.shade600))),
+          const SizedBox(height: 20),
 
-            Center(
-              child: Text(
-                "Add Payment",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.grey.shade800),
-              ),
+          // Amount
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: "Enter Amount (₹)",
+              prefixIcon: const Icon(Icons.currency_rupee, size: 20),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purple, width: 2)),
             ),
+          ),
+          const SizedBox(height: 16),
 
-            SizedBox(height: 8),
-            Center(
-              child: Text(
-                "For ${widget.booking.customerName}",
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-              ),
-            ),
-
-            SizedBox(height: 20),
-
-            // Amount
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: "Enter Amount (₹)",
-                prefixIcon: Icon(Icons.currency_rupee, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
+          // Payment Method
+          Text("Select Payment Method", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.grey.shade800)),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 2.5),
+            itemCount: _paymentMethods.length,
+            itemBuilder: (context, i) {
+              final m = _paymentMethods[i];
+              final selected = _selectedPaymentMethod == m.id;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedPaymentMethod = m.id;
+                    if (!m.requiresImage) _selectedImage = null;
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: selected ? m.color.withOpacity(0.1) : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.purple, width: 2)),
-              ),
-            ),
-
-            SizedBox(height: 16),
-
-            // Payment Method
-            Text(
-              "Select Payment Method",
-              style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  color: Colors.grey.shade800),
-            ),
-
-            SizedBox(height: 12),
-
-            GridView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 2.5),
-              itemCount: _paymentMethods.length,
-              itemBuilder: (context, i) {
-                final m = _paymentMethods[i];
-                final selected = _selectedPaymentMethod == m.id;
-
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedPaymentMethod = m.id;
-                      if (!m.requiresImage) _selectedImage = null;
-                    });
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: selected ? m.color.withOpacity(0.1) : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: selected ? m.color : Colors.grey.shade300,
-                          width: selected ? 2 : 1),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(width: 12),
-                        Container(
-                          padding: EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                              color: m.color.withOpacity(0.2), shape: BoxShape.circle),
-                          child: Icon(m.icon, color: m.color, size: 20),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            m.name,
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade800,
-                                fontSize: 13),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (selected) ...[
-                          SizedBox(width: 8),
-                          Icon(Icons.check_circle, color: m.color, size: 18),
-                          SizedBox(width: 8),
-                        ],
-                      ],
-                    ),
+                    border: Border.all(color: selected ? m.color : Colors.grey.shade300, width: selected ? 2 : 1),
                   ),
-                );
-              },
-            ),
-
-            SizedBox(height: 16),
-
-            // Description view
-            if (_selectedPaymentMethod != null) ...[
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).color.withOpacity(0.3),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: m.color.withOpacity(0.2), shape: BoxShape.circle), child: Icon(m.icon, color: m.color, size: 20)),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(m.name, style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      if (selected) ...[const SizedBox(width: 8), Icon(Icons.check_circle, color: m.color, size: 18), const SizedBox(width: 8)],
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).color,
-                        size: 18),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).description,
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                      ),
-                    ),
-                  ],
-                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Description
+          if (_selectedPaymentMethod != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).color.withOpacity(0.3)),
               ),
-
-              SizedBox(height: 12),
-            ],
-
-            // Date Picker
-            Text(
-              "Payment Date",
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.grey.shade800),
-            ),
-            SizedBox(height: 8),
-
-            InkWell(
-              onTap: () => _selectDate(context),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, color: Colors.purple),
-                    SizedBox(width: 12),
-                    Text("${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                        style: TextStyle(fontSize: 15)),
-                    Spacer(),
-                    Icon(Icons.arrow_drop_down, color: Colors.grey),
-                  ],
-                ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: _paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).color, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_paymentMethods.firstWhere((m) => m.id == _selectedPaymentMethod).description, style: TextStyle(fontSize: 13, color: Colors.grey.shade700))),
+                ],
               ),
             ),
+            const SizedBox(height: 12),
+          ],
 
-            SizedBox(height: 16),
+          // Date Picker
+          Text("Payment Date", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.grey.shade800)),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => _selectDate(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today, color: Colors.purple),
+                  const SizedBox(width: 12),
+                  Text("${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}", style: const TextStyle(fontSize: 15)),
+                  const Spacer(),
+                  const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
-            // Image Upload
-            if (_requiresImage) ...[
-              Text("Upload Proof",
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.grey.shade800)),
-              SizedBox(height: 8),
-
-              _selectedImage == null
-                  ? Row(
+          // Image Upload
+          if (_requiresImage) ...[
+            Text("Upload Proof", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.grey.shade800)),
+            const SizedBox(height: 8),
+            if (_selectedImage == null)
+              Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(Icons.photo_library),
-                      label: Text("Gallery"),
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text("Gallery"),
                       onPressed: _pickImage,
-                      style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.purple,
-                          side: BorderSide(color: Colors.purple)),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.purple, side: const BorderSide(color: Colors.purple)),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(Icons.camera_alt),
-                      label: Text("Camera"),
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text("Camera"),
                       onPressed: _takePhoto,
-                      style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.purple,
-                          side: BorderSide(color: Colors.purple)),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.purple, side: const BorderSide(color: Colors.purple)),
                     ),
                   ),
                 ],
               )
-                  : Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade200)),
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.green.shade200)),
                 child: Row(
                   children: [
                     Icon(Icons.check_circle, color: Colors.green.shade700),
-                    SizedBox(width: 8),
-                    Expanded(
-                        child: Text("Image selected",
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.green))),
-                    IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red.shade600),
-                        onPressed: _removeImage),
+                    const SizedBox(width: 8),
+                    const Expanded(child: Text("Image selected", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.green))),
+                    IconButton(icon: Icon(Icons.delete, color: Colors.red.shade600), onPressed: _removeImage, tooltip: 'Remove image'),
                   ],
                 ),
               ),
-
-              SizedBox(height: 12),
-            ],
-
-            // Remarks
-            TextField(
-              controller: _remarkController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: "Remarks (optional)",
-                alignLabelWithHint: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.purple, width: 2)),
-              ),
-            ),
-
-            SizedBox(height: 24),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitPayment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  disabledBackgroundColor: Colors.purple.shade300,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                ),
-                child: _isSubmitting
-                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                    : Text("Submit Payment",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
-
-            SizedBox(height: 20),
+            const SizedBox(height: 12),
           ],
-        ),
+
+          // Remarks
+          TextField(
+            controller: _remarkController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: "Remarks (optional)",
+              alignLabelWithHint: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purple, width: 2)),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Submit
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submitPayment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                disabledBackgroundColor: Colors.purple.shade300,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 2,
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                  : const Text("Submit Payment", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }
-
 
   Future<void> _submitPayment() async {
     // Validation

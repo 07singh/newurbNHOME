@@ -50,7 +50,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           _profileImageUrl = "https://realapp.cheenu.in$imageUrl";
           print('✅ AssociateProfileScreen - Final image URL: $_profileImageUrl');
         } else {
-          print('⚠️ AssociateProfileScreen - profileImageUrl is null or empty');
+          print('⚠ AssociateProfileScreen - profileImageUrl is null or empty');
           _profileImageUrl = null;
         }
       }
@@ -121,7 +121,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
       if (response.status == "Success") {
         _showSnackBar(response.message);
         await _refresh();
-        
+
         // Update local state with new image
         final updatedProfile = await _loadProfile();
         if (updatedProfile != null && mounted) {
@@ -139,7 +139,7 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
       setState(() => _isUploading = false);
     }
   }
-  
+
   // Helper method to return profile data when navigating back
   Future<void> _returnProfileData() async {
     try {
@@ -302,6 +302,8 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
           child: Column(
             children: [
               _buildProfileAvatar(),
+              const SizedBox(height: 8),
+              _buildChangeImageButton(),
               const SizedBox(height: 16),
               Text(
                 "ID: ${profile.associateId}",
@@ -325,35 +327,38 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
       clipBehavior: Clip.none,
       children: [
         // Profile Avatar
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 4),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: CircleAvatar(
-            radius: _avatarRadius,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: _getProfileImage(),
-            child: _isUploading
-                ? Container(
-              decoration: const BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
+        GestureDetector(
+          onTap: _isUploading ? null : _showImageSourceDialog,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-            )
-                : null,
+              ],
+            ),
+            child: CircleAvatar(
+              radius: _avatarRadius,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: _getProfileImage(),
+              child: _isUploading
+                  ? Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                  ),
+                ),
+              )
+                  : null,
+            ),
           ),
         ),
 
@@ -375,6 +380,21 @@ class _AssociateProfileScreenState extends State<AssociateProfileScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildChangeImageButton() {
+    return TextButton.icon(
+      onPressed: _isUploading ? null : _showImageSourceDialog,
+      icon: const Icon(Icons.photo_camera_back_outlined),
+      label: const Text(
+        'Change Image',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.deepPurple,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+      ),
     );
   }
 

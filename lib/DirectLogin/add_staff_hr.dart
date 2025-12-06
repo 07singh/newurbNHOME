@@ -161,11 +161,11 @@ class _AddStaffScreenhrState extends State<AddStaffScreenhr> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Add Staff", style: TextStyle(color: Colors.black)),
+        title: const Text("Add Staff", style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF3A62B7),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },

@@ -6,6 +6,7 @@ import '/Model/login_model.dart';
 import '/HRdashboad/HrDashboard.dart'; // HR dashboard import
 import '/service/auth_manager.dart';
 import '/Model/user_session.dart';
+import '/service/notification_service.dart';
 
 class SignInPageh extends StatefulWidget {
   const SignInPageh({super.key});
@@ -57,6 +58,14 @@ class _SignInPagehState extends State<SignInPageh> {
           );
 
           await AuthManager.saveSession(session);
+
+          // Save device token to backend after login
+          try {
+            await NotificationService().saveTokenToBackend();
+            print('✅ Device token saved after HR login');
+          } catch (e) {
+            print('⚠️ Error saving device token after login: $e');
+          }
 
           Navigator.pushReplacement(
             context,

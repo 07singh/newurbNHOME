@@ -5,7 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '/HRdashboad/PaymentHistoryScreen.dart';
+import '../plot_screen/plot_refresh_notifier.dart';
+import '../Add_associate/booking_summary_indiviadual.dart';
+import '../service/notification_service.dart';
 
 enum BookingStatus { pending, booked, sellout }
 
@@ -100,6 +102,7 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
   final String selloutUrl = "https://realapp.cheenu.in/Api/SelloutPlot/";
   final String acceptUrl = "https://realapp.cheenu.in/api/acceptbooking/add";
   final String rejectUrl = "https://realapp.cheenu.in/api/rejectbookingrequest/reject";
+  final String bookingSummaryUrl = "https://realapp.cheenu.in/Api/GetBookingSummaryIndividual";
 
   @override
   void initState() {
@@ -300,6 +303,7 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
         setState(() {
           plots.remove(plot); // ← Instant remove
         });
+        PlotRefreshNotifier.notifyRefresh();
         _showSnackBar("Booking Approved Successfully", Colors.green);
       } else {
         final msg = jsonDecode(response.body)["message"] ?? "Approval failed";
@@ -343,6 +347,7 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
 
       if (response.statusCode == 200) {
         setState(() => plots.remove(plot));
+        PlotRefreshNotifier.notifyRefresh();
         _showSnackBar("Booking Rejected", Colors.red);
       } else {
         _showSnackBar("Reject failed", Colors.orange);
@@ -387,12 +392,102 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
 
   // Show Payment History
   void _showPaymentHistory(Plot plot) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const PaymentHistoryScreen(),
-      ),
+    _showBookingSummary(plot);
+  }
+
+  Future<void> _showBookingSummary(Plot plot) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
+    BookingSummaryDetails? details;
+    String? error;
+
+    try {
+      details = await _fetchBookingSummaryDetails(plot);
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      if (mounted) Navigator.pop(context);
+    }
+
+    if (!mounted) return;
+
+    if (details != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BookingSummaryIndividual(summary: details!),
+        ),
+      );
+      return;
+    }
+
+    _showSnackBar(error ?? "Unable to load booking summary", Colors.orange);
+  }
+
+  Future<BookingSummaryDetails?> _fetchBookingSummaryDetails(Plot plot) async {
+    final uri = Uri.parse("$bookingSummaryUrl?bookingId=${plot.id}");
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) return null;
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    final dataRaw = decoded["data"];
+    if (dataRaw == null || dataRaw is! Map) return null;
+    final data = Map<String, dynamic>.from(dataRaw);
+
+    final details = BookingSummaryDetails(
+      bookingId: _extractInt(data, "Booking_Id", plot.id),
+      projectName: _extractString(data, ["Project_Name"], plot.projectName),
+      plotNumber: _extractString(data, ["Plot_Number"], plot.plotNumber),
+      plotType: _extractString(data, ["Plot_Type"], plot.plotType),
+      bookingStatus: _extractString(data, ["Booking_Status", "BookingStatus"], plot.bookingStatus),
+      bookingArea: _extractString(data, ["Booking_Area"], plot.bookingArea),
+      remainingArea: _extractString(data, ["Remaining_Area"], plot.remainingArea),
+      totalArea: _extractString(data, ["Total_Area"], plot.totalArea),
+      purchasePrice: _extractString(data, ["Purchase_price", "Purchase_Price"], plot.purchasePrice),
+      totalAmount: _extractDouble(data, ["Total_Amount"], plot.totalAmount),
+      paidAmount: _extractDouble(data, ["Total_Approved_Payments", "Booking_ReceivingAmount", "Receiving_Amount"], plot.paidAmount),
+      pendingAmount: _extractDouble(data, ["Current_PendingAmount", "Total_Pending_Payments"], plot.pendingAmount),
+      paidThrough: _extractString(data, ["Paid_Through"], plot.paidThrough),
+      screenshot: _extractString(data, ["Screenshot"], plot.screenshot),
+      dealerName: _extractString(data, ["Booked_ByDealer", "Dealer_Name"], plot.dealerName),
+      dealerPhone: _extractString(data, ["Dealer_Phn_Number", "Dealer_Phone"], plot.dealerPhone),
+      customerName: _extractString(data, ["Customer_Name"], plot.customerName),
+      customerPhone: _extractString(data, ["Customer_Phn_Number", "Customer_Phone"], plot.customerPhone),
+    );
+
+    return details;
+  }
+
+  String _extractString(Map<String, dynamic> data, Iterable<String> keys, String fallback) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty && text.toLowerCase() != "null") return text;
+    }
+    return fallback;
+  }
+
+  double _extractDouble(Map<String, dynamic> data, Iterable<String> keys, double fallback) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null) continue;
+      final parsed = double.tryParse(value.toString());
+      if (parsed != null) return parsed;
+    }
+    return fallback;
+  }
+
+  int _extractInt(Map<String, dynamic> data, String key, int fallback) {
+    final value = data[key];
+    if (value == null) return fallback;
+    return int.tryParse(value.toString()) ?? fallback;
   }
 
   // Build Action Icon Widget
@@ -437,7 +532,7 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Plot Status", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
+        title: const Text("Plot Status", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         centerTitle: true,
         backgroundColor: const Color(0xFF3371F4),
       ),
@@ -469,6 +564,8 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
                       child: Column(
                         children: [
                           ListTile(
+                            onTap: null,
+                            trailing: null,
                             leading: CircleAvatar(
                               radius: 28,
                               backgroundColor: Colors.blue.shade700,
@@ -478,6 +575,8 @@ class _PendingRequestsHrScreenState extends State<PendingRequestsHrScreen> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Text("ID: ${plot.id}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
                                 Text("Plot: ${plot.plotNumber} | Customer: ${plot.customerName}"),
                                 Text("Dealer: ${plot.dealerName} • ${plot.dealerPhone}"),
                                 Text("Paid: ₹${plot.paidAmount.toStringAsFixed(0)} / ₹${plot.totalAmount.toStringAsFixed(0)}",
@@ -687,6 +786,25 @@ class _AddPaymentModalState extends State<_AddPaymentModal> {
       );
 
       if (response.statusCode == 200) {
+        // Send push notification for payment
+        try {
+          final notificationService = NotificationService();
+          await notificationService.sendNotification(
+            title: 'Payment Added',
+            body: 'Payment of ₹${amount.toStringAsFixed(2)} added via $_selectedPaymentMethod for Booking #${widget.plot.id}',
+            data: {
+              'type': 'payment_added',
+              'booking_id': widget.plot.id.toString(),
+              'paid_amount': amount.toString(),
+              'paid_through': _selectedPaymentMethod ?? 'Unknown',
+              'payment_date': DateTime.now().toIso8601String().split('T')[0],
+            },
+            topic: 'payments',
+          );
+        } catch (e) {
+          print('⚠️ Error sending payment notification: $e');
+        }
+
         Navigator.pop(context);
         widget.onSuccess();
         ScaffoldMessenger.of(context).showSnackBar(

@@ -2,6 +2,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '/Model/modelofindividual.dart';
+import '/service/activity_notification_helper.dart';
+import '/service/auth_manager.dart';
 
 /// Service for managing booking-related API operations
 class BookingService {
@@ -139,6 +141,21 @@ class BookingService {
       ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // Send notification to HR/Director via backend API
+        try {
+          final session = await AuthManager.getCurrentSession();
+          final userId = session != null ? int.tryParse(session.userId ?? '') : null;
+          
+          await ActivityNotificationHelper.notifyPaymentAdded(
+            amount: paidAmount,
+            paymentMethod: paidThrough,
+            bookingId: bookingId,
+            userId: userId,
+          );
+        } catch (e) {
+          print('⚠️ Error sending payment notification: $e');
+        }
+
         try {
           final result = json.decode(response.body) as Map<String, dynamic>;
           return PaymentResponse.fromJson(result);

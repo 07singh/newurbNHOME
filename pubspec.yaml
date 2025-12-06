@@ -48,6 +48,9 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   url_launcher: ^6.3.2
+  firebase_core: ^3.12.0
+  firebase_messaging: ^15.2.10
+  flutter_local_notifications: ^17.2.0
 
 
 
@@ -106,8 +109,6 @@ flutter:
   assets:
     - assets/logo3.png
     - assets/playstore.png
-    - assets/imglogo8.webp
-    - assets/imglogo8.webp
     - assets/1.jpg
     - assets/2.jpg
     - assets/3.jpg

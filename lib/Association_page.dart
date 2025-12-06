@@ -53,12 +53,12 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
   String? _userEmail;
   String? _userPhone;
   String? _associateId;
-  
+
   // Profile data from API
   AssociateProfile? _profile;
   bool _isLoadingProfile = true;
   String? _profileError;
-  
+
   // Services
   final AssociateProfileService _profileService = AssociateProfileService();
   final BookingService _bookingService = BookingService();
@@ -93,13 +93,13 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     _userRole = widget.userRole;
     _profileImageUrl = widget.profileImageUrl;
     _userPhone = widget.phone;
-    
+
     // Fetch real profile data from API
     _loadProfileData();
     // Fetch booking count
     _loadBookingCount();
   }
-  
+
   /// Fetches profile data from API and updates UI + Session
   Future<void> _loadProfileData() async {
     if (_userPhone == null || _userPhone!.isEmpty) {
@@ -107,7 +107,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       final session = await AuthManager.getCurrentSession();
       _userPhone = session?.userMobile ?? session?.phone;
     }
-    
+
     if (_userPhone == null || _userPhone!.isEmpty) {
       setState(() {
         _isLoadingProfile = false;
@@ -119,22 +119,22 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     try {
       // Fetch profile from API
       final profile = await _profileService.fetchProfile(_userPhone!);
-      
+
       if (profile != null && mounted) {
         // Debug: Print received profile image URL
         print('📸 Profile Image URL from API: ${profile.profileImageUrl}');
-        
+
         setState(() {
           _profile = profile;
           _userName = profile.fullName.isNotEmpty ? profile.fullName : 'Associate';
           _userEmail = profile.email;
           _userPhone = profile.phone;
           _associateId = profile.associateId;
-          
+
           // Build profile image URL with better handling
           if (profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty) {
             String imageUrl = profile.profileImageUrl!.trim();
-            
+
             // Check if URL already starts with http/https
             if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
               _profileImageUrl = imageUrl;
@@ -143,7 +143,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
               if (imageUrl.startsWith('/')) {
                 imageUrl = imageUrl.substring(1);
               }
-              
+
               // If URL already contains a folder path (like "Uploads/"), don't add "Images/"
               // Otherwise add "Images/" prefix
               if (imageUrl.contains('/')) {
@@ -154,17 +154,17 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                 _profileImageUrl = 'https://realapp.cheenu.in/Images/$imageUrl';
               }
             }
-            
+
             print('✅ Final Image URL: $_profileImageUrl');
           } else {
-            print('⚠️ No profile image URL received from API');
+            print('⚠ No profile image URL received from API');
             _profileImageUrl = null;
           }
-          
+
           _isLoadingProfile = false;
           _profileError = null;
         });
-        
+
         // Update session with real profile data for auto-login
         await _updateSessionWithProfile(profile);
       } else {
@@ -182,7 +182,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       }
     }
   }
-  
+
   /// Updates Hive session with fetched profile data
   Future<void> _updateSessionWithProfile(AssociateProfile profile) async {
     try {
@@ -215,7 +215,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       _loadProfileData();
     }
   }
-  
+
   /// Refresh profile data manually
   Future<void> _refreshProfile() async {
     setState(() {
@@ -224,7 +224,7 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     });
     await _loadProfileData();
   }
-  
+
   /// Fetch booking count from API and update dashboard
   Future<void> _loadBookingCount() async {
     try {
@@ -234,15 +234,15 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         final session = await AuthManager.getCurrentSession();
         phone = session?.userMobile ?? session?.phone;
       }
-      
+
       if (phone == null || phone.isEmpty) {
-        print('⚠️ Phone number not available for booking count');
+        print('⚠ Phone number not available for booking count');
         return;
       }
-      
+
       // Fetch bookings
       final bookings = await _bookingService.fetchBookingsForPhone(phone);
-      
+
       // Update dashboard data with actual count
       if (mounted) {
         setState(() {
@@ -255,15 +255,6 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       // Keep default count (0) on error
     }
   }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -293,14 +284,6 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       growth: (_dashboardData['commissionReceived']['growth'] as num).toDouble(),
       isCurrency: true,
     ),
-    DashboardItem(
-      title: "Income History",
-      icon: Icons.attach_money,
-      color: Colors.orange,
-      count: _dashboardData['totalCommission']['count'],
-      growth: (_dashboardData['totalCommission']['growth'] as num).toDouble(),
-      isCurrency: true,
-    ),
 
     DashboardItem(
       title: "Add client Visit",
@@ -322,25 +305,15 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     Navigator.pop(context);
 
     if (title == "Logout") {
-      // Clear Hive session
-      await AuthManager.clearSession();
-      // Clear attendance state
-      await AttendanceManager.clearCheckIn();
-      
-      // Navigate to role selection screen
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const HomePage()),
-            (Route<dynamic> route) => false,
-      );
+      final shouldLogout = await _confirmLogout();
+      if (shouldLogout != true) return;
+
+      await _performLogout();
     } else if (title == "My Total Booking") {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()),
       );
-    } else if (title == "Income History") {
-      Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PaymentReceivedScreen()),);
     } else if (title == "Total income") {
       Navigator.push(
         context,
@@ -379,6 +352,41 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
     }
   }
 
+  Future<void> _performLogout() async {
+    await AuthManager.clearSession();
+    await AttendanceManager.clearCheckIn();
+
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const HomePage()),
+          (Route<dynamic> route) => false,
+    );
+  }
+
+  Future<bool?> _confirmLogout() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout?'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _refreshData() {
     setState(() {
       _dashboardData['myBooking']['count'] += 1;
@@ -398,13 +406,13 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh), 
-            onPressed: () {
-              _refreshData();
-              _refreshProfile();
-              _loadBookingCount();
-            }, 
-            tooltip: 'Refresh Data'
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                _refreshData();
+                _refreshProfile();
+                _loadBookingCount();
+              },
+              tooltip: 'Refresh Data'
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -421,13 +429,13 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
           children: [
             // Error banner if profile failed to load
             if (_buildErrorBanner() != null) _buildErrorBanner()!,
-            
+
             _buildWelcomeHeader(),
             const SizedBox(height: 20),
             const SizedBox(height: 20),
             _buildDashboardGrid(),
             const SizedBox(height: 20),
-             _buildNotifications()
+            _buildNotifications()
           ],
         ),
       ),
@@ -438,68 +446,67 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
   // PROFILE PIC FROM API - Dynamic with Loading State
   Widget _buildWelcomeHeader() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple.shade600, Colors.purple.shade400]),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          // Profile Avatar with Loading State
-          Stack(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple.shade600, Colors.purple.shade400]),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
             children: [
-              _buildProfileAvatar(radius: 30),
-              if (_profile != null && _profile!.status)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Welcome back!", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
-                Text(
-                  _isLoadingProfile ? 'Loading...' : _userName,
-                  style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                if (_associateId != null && _associateId!.isNotEmpty)
-                  Text(
-                    'ID: $_associateId',
-                    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
-                  )
-                else
-                  Text(_userRole, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-
-            ),
-          ),
-        ],
+        // Profile Avatar with Loading State
+        Stack(
+        children: [
+        _buildProfileAvatar(radius: 30),
+        if (_profile != null && _profile!.status)
+    Positioned(
+      bottom: 0,
+      right: 0,
+      child: Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: Colors.green,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
       ),
+    ),
+    ],
+    ),
+    const SizedBox(width: 16),
+    Expanded(
+    child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+    const Text("Welcome back!", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
+    const SizedBox(height: 4),
+    Text(
+    _isLoadingProfile ? 'Loading...' : _userName,
+    style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 24, fontWeight: FontWeight.bold),
+    overflow: TextOverflow.ellipsis,
+    ),
+    const SizedBox(height: 4),
+    if (_associateId != null && _associateId!.isNotEmpty)
+    Text(
+    'ID: $_associateId',
+    style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+    )
+    else
+    Text(_userRole, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+    ],
+    ),
+    ),Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+
+                ),
+              ),
+            ],
+        ),
     );
   }
 
@@ -524,10 +531,8 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const MyBookingScreen ()));
                 } else if (item.title == "Book New Plot") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const BookPlotScreenNoNav()));
-                } else if (item.title == "Total Income") {
+                } else if (item.title == "Get commission") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const TotalBookingListScreen()));
-                } else if (item.title == "Income History") {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const  PaymentReceivedScreen()));
                 } else if (item.title == "Add client Visit") {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const  Associate_addNewVisit ()));
                 }  else if (item.title == "Our Total lists") {
@@ -706,7 +711,6 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
 
                   ]),
                   _buildDrawerSection("FINANCE", [
-                    _buildDrawerItem("Income History", Icons.attach_money, Colors.orange),
                     _buildDrawerItem("Total income", Icons.payments, Colors.teal),
                   ]),
                   _buildDrawerSection("OPERATIONS", [
@@ -776,53 +780,53 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
       child: ClipOval(
         child: _isLoadingProfile
             ? Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-                ),
-              )
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+          ),
+        )
             : _profileImageUrl != null && _profileImageUrl!.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: _profileImageUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) {
-                      print('❌ Image load error for $url: $error');
-                      return Container(
-                        color: Colors.deepPurple.shade100,
-                        child: Icon(
-                          Icons.person,
-                          size: radius * 1.2,
-                          color: Colors.deepPurple.shade300,
-                        ),
-                      );
-                    },
-                  )
-                : Container(
-                    color: Colors.deepPurple.shade100,
-                    child: Icon(
-                      Icons.person,
-                      size: radius * 1.2,
-                      color: Colors.deepPurple.shade300,
-                    ),
-                  ),
+            ? CachedNetworkImage(
+          imageUrl: _profileImageUrl!,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+            ),
+          ),
+          errorWidget: (context, url, error) {
+            print('❌ Image load error for $url: $error');
+            return Container(
+              color: Colors.deepPurple.shade100,
+              child: Icon(
+                Icons.person,
+                size: radius * 1.2,
+                color: Colors.deepPurple.shade300,
+              ),
+            );
+          },
+        )
+            : Container(
+          color: Colors.deepPurple.shade100,
+          child: Icon(
+            Icons.person,
+            size: radius * 1.2,
+            color: Colors.deepPurple.shade300,
+          ),
+        ),
       ),
     );
   }
-  
+
   // REUSABLE: Get profile image with fallback and error handling (kept for compatibility)
   ImageProvider _getProfileImageProvider() {
     // Priority: 1. Fetched profile image, 2. Widget prop, 3. Default
     String? imageUrl = _profileImageUrl;
-    
+
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      print('🖼️ Loading image from: $imageUrl');
-      
+      print('🖼 Loading image from: $imageUrl');
+
       return CachedNetworkImageProvider(
         imageUrl,
         errorListener: (error) {
@@ -830,12 +834,12 @@ class _AssociateDashboardPageState extends State<AssociateDashboardPage> {
         },
       );
     }
-    
+
     print('📷 Using default avatar - no image URL available');
     // Fallback to default avatar
     return const AssetImage('assets/logo3.png'); // Using your app logo as fallback
   }
-  
+
   /// Display error message if profile loading failed
   Widget? _buildErrorBanner() {
     if (_profileError != null && _profileError!.isNotEmpty) {

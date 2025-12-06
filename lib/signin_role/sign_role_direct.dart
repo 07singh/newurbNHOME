@@ -8,6 +8,7 @@ import '/DirectLogin/DirectLoginPage.dart';
 import '/provider/user_provider.dart';
 import '/service/auth_manager.dart';
 import '/Model/user_session.dart';
+import '/service/notification_service.dart';
 
 class SignInPaged extends StatefulWidget {
   const SignInPaged({super.key});
@@ -60,6 +61,14 @@ class _SignInPagedState extends State<SignInPaged> {
           );
 
           await AuthManager.saveSession(session);
+
+          // Save device token to backend after login
+          try {
+            await NotificationService().saveTokenToBackend();
+            print('✅ Device token saved after Director login');
+          } catch (e) {
+            print('⚠️ Error saving device token after login: $e');
+          }
 
           Provider.of<UserProvider>(context, listen: false)
               .setUser(loginData.name ?? 'Unknown', loginData.position ?? 'Director');

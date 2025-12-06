@@ -196,25 +196,88 @@ class _WeekFlowupPageState extends State<WeekFlowupPage> {
 
     final url = "https://realapp.cheenu.in/Api/GetFollowUPIndividually?createdBy=$_userPhone";
     try {
+      print('📤 Fetching follow-ups from: $url');
       final response = await http.get(Uri.parse(url));
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
-        if (body is Map && body["FollowUps"] is List) {
-          final list = (body["FollowUps"] as List)
+        List<Map<String, dynamic>> list = [];
+        
+        // Handle different response formats
+        if (body is List) {
+          // Response is directly a list
+          print('✅ Response is a List');
+          list = body
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
-          setState(() => _followUps
-            ..clear()
-            ..addAll(list));
+        } else if (body is Map) {
+          // Response is a map - check for different possible keys
+          if (body["FollowUps"] is List) {
+            print('✅ Found FollowUps key');
+            list = (body["FollowUps"] as List)
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          } else if (body["followUps"] is List) {
+            print('✅ Found followUps key (lowercase)');
+            list = (body["followUps"] as List)
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          } else if (body["data"] is List) {
+            print('✅ Found data key');
+            list = (body["data"] as List)
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          } else if (body["Data"] is List) {
+            print('✅ Found Data key');
+            list = (body["Data"] as List)
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          } else {
+            // Try to find any list in the response
+            print('⚠️ Looking for any list in response...');
+            for (var key in body.keys) {
+              if (body[key] is List) {
+                print('✅ Found list in key: $key');
+                list = (body[key] as List)
+                    .whereType<Map>()
+                    .map((e) => Map<String, dynamic>.from(e))
+                    .toList();
+                break;
+              }
+            }
+          }
+        }
+        
+        if (list.isNotEmpty) {
+          print('✅ Successfully parsed ${list.length} follow-ups');
+          setState(() {
+            _followUps
+              ..clear()
+              ..addAll(list);
+            _error = null;
+          });
         } else {
-          setState(() => _error = "Unexpected response format");
+          print('⚠️ No follow-ups found in response');
+          setState(() {
+            _followUps.clear();
+            _error = null; // No error, just empty list
+          });
         }
       } else {
-        setState(() => _error = "Failed: ${response.statusCode}");
+        print('❌ API returned status: ${response.statusCode}');
+        setState(() => _error = "Failed: ${response.statusCode}\n${response.body}");
       }
-    } catch (e) {
-      setState(() => _error = "Unable to load data ($e)");
+    } catch (e, stackTrace) {
+      print('❌ Error fetching follow-ups: $e');
+      print('Stack trace: $stackTrace');
+      setState(() => _error = "Unable to load data: $e");
     } finally {
       if (mounted) {
         setState(() => _loading = false);

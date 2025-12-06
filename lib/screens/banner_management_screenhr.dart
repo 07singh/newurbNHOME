@@ -6,14 +6,14 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../service/banner_service.dart';
 import '../Model/banner_model.dart';
 
-class BannerManagementScreen extends StatefulWidget {
-  const BannerManagementScreen({super.key});
+class BannerManagementScreenhr extends StatefulWidget {
+  const BannerManagementScreenhr({super.key});
 
   @override
-  State<BannerManagementScreen> createState() => _BannerManagementScreenState();
+  State<BannerManagementScreenhr> createState() => _BannerManagementScreenhrState();
 }
 
-class _BannerManagementScreenState extends State<BannerManagementScreen> {
+class _BannerManagementScreenhrState extends State<BannerManagementScreenhr> {
   final BannerService _bannerService = BannerService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -301,7 +301,7 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Select Image'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -400,7 +400,7 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Banner Management'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -435,7 +435,7 @@ class _BannerManagementScreenState extends State<BannerManagementScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _submitBanner,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
+                          backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),

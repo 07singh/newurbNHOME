@@ -5,6 +5,7 @@ import '/Model/associatate_new_login_model.dart';
 import '../Association_page.dart'; // Dashboard page
 import '/service/auth_manager.dart';
 import '/Model/user_session.dart';
+import '/service/notification_service.dart';
 
 class AssociateLoginScreen extends StatefulWidget {
   const AssociateLoginScreen({super.key});
@@ -49,6 +50,14 @@ class _AssociateLoginScreenState extends State<AssociateLoginScreen> {
         );
 
         await AuthManager.saveSession(session);
+
+        // Save FCM token to backend after login
+        try {
+          await NotificationService().saveTokenToBackend();
+          print('✅ Device token saved after Associate login');
+        } catch (e) {
+          print('⚠️ Error saving device token after login: $e');
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

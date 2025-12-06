@@ -172,8 +172,12 @@ class _AttendanceScreentState extends State<AttendanceScreent> with SingleTicker
   Future<void> _approveRecord(String id) async {
     final result = await _attendanceService.acceptAttendance(id);
     if (mounted) {
+      final message = result.toLowerCase().contains('failed')
+          ? result
+          : 'Attendance successfully accepted';
+      Navigator.of(context).maybePop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result), backgroundColor: Colors.green),
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
       );
     }
     _removePendingRecord(id);
@@ -182,8 +186,12 @@ class _AttendanceScreentState extends State<AttendanceScreent> with SingleTicker
   Future<void> _rejectRecord(String id) async {
     final result = await _attendanceService.rejectAttendance(id);
     if (mounted) {
+      final message = result.toLowerCase().contains('failed')
+          ? result
+          : 'Attendance successfully rejected';
+      Navigator.of(context).maybePop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result), backgroundColor: Colors.red),
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     }
     _removePendingRecord(id);

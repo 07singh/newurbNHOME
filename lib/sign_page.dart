@@ -6,6 +6,7 @@ import '/Model/login_model.dart';
 import 'HomeScreen.dart';
 import '/service/auth_manager.dart';
 import '/Model/user_session.dart';
+import '/service/notification_service.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -22,9 +23,9 @@ class _SignInPageState extends State<SignInPage> {
   final loginService = LoginService();
 
   bool _isLoading = false;
-  bool _obscurePassword = true; // 👈 Password hide/show toggle
+  bool _obscurePassword = true;
 
-  // Position dropdown
+  // Default selected position
   String position = 'TL';
 
   Future<void> _login() async {
@@ -40,15 +41,15 @@ class _SignInPageState extends State<SignInPage> {
     setState(() => _isLoading = false);
 
     if (loginData != null && loginData.statuscode == "Success") {
-      if (loginData.position == 'TL' ||
-          loginData.position == 'Sales Executive' ||
-          loginData.position == 'Accountant') {   // 👈 ADDED
-
+      // Only TL and Sales Executive are allowed
+      if (loginData.position == 'TL' || loginData.position == 'Sales Executive') {
+        // Save user data securely
         await storage.write(key: 'user_id', value: (loginData.id ?? '').toString());
         await storage.write(key: 'user_name', value: loginData.name ?? '');
         await storage.write(key: 'user_mobile', value: loginData.mobile ?? '');
         await storage.write(key: 'user_role', value: loginData.position ?? '');
 
+        // Create user session
         final session = UserSession.fromLogin(
           userId: (loginData.id ?? '').toString(),
           userName: loginData.name ?? 'Unknown',
@@ -62,20 +63,33 @@ class _SignInPageState extends State<SignInPage> {
 
         await AuthManager.saveSession(session);
 
+        // Save FCM token to backend after login
+        try {
+          await NotificationService().saveTokenToBackend();
+          print('✅ Device token saved after Employee login');
+        } catch (e) {
+          print('⚠️ Error saving device token after login: $e');
+        }
+
+        // Navigate to HomeScreen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => HomeScreen()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Access Denied: Only TL, Sales Executive and Accountant can login here'),
+            content: Text('Access Denied: Only TL and Sales Executive can login here'),
+            backgroundColor: Colors.red,
           ),
         );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loginData?.message ?? "Login Failed")),
+        SnackBar(
+          content: Text(loginData?.message ?? "Login Failed. Please try again."),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -112,7 +126,9 @@ class _SignInPageState extends State<SignInPage> {
               child: Form(
                 key: _formKey,
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Logo
                     SizedBox(
                       width: 180,
                       height: 180,
@@ -132,13 +148,12 @@ class _SignInPageState extends State<SignInPage> {
 
                     const SizedBox(height: 20),
 
-                    // Position Dropdown
+                    // Position Dropdown (Accountant Removed)
                     DropdownButtonFormField<String>(
                       value: position,
                       items: const [
                         DropdownMenuItem(value: 'TL', child: Text('TL')),
                         DropdownMenuItem(value: 'Sales Executive', child: Text('Sales Executive')),
-                        DropdownMenuItem(value: 'Accountant', child: Text('Accountant')), // 👈 ADDED
                       ],
                       onChanged: (value) => setState(() => position = value!),
                       decoration: InputDecoration(
@@ -148,11 +163,13 @@ class _SignInPageState extends State<SignInPage> {
                         ),
                         prefixIcon: const Icon(Icons.work, color: Colors.blueAccent),
                       ),
+                      validator: (value) =>
+                      value == null ? 'Please select a position' : null,
                     ),
 
                     const SizedBox(height: 20),
 
-                    // PHONE FIELD (Only 10 digits)
+                    // Phone Number Field
                     TextFormField(
                       controller: phoneController,
                       keyboardType: TextInputType.number,
@@ -179,7 +196,7 @@ class _SignInPageState extends State<SignInPage> {
 
                     const SizedBox(height: 20),
 
-                    // PASSWORD FIELD (with Eye icon)
+                    // Password Field with Toggle Visibility
                     TextFormField(
                       controller: passwordController,
                       obscureText: _obscurePassword,
@@ -205,21 +222,24 @@ class _SignInPageState extends State<SignInPage> {
 
                     const SizedBox(height: 30),
 
-                    // LOGIN BUTTON
+                    // Login Button
                     SizedBox(
                       width: double.infinity,
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.blueAccent,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          backgroundColor: Colors.blueAccent,
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text("Login", style: TextStyle(fontSize: 18, color: Colors.white)),
+                            : const Text(
+                          "Login",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                       ),
                     ),
                   ],

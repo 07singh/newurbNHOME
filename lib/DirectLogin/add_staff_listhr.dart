@@ -31,7 +31,7 @@ class _StaffListScreenhrState extends State<StaffListScreenhr> {
       appBar: AppBar(
         title: const Text(
           "Staff List",
-          style: TextStyle(color: Colors.black),
+          style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Color(0xFF3A62B7),
         centerTitle: true,

@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '/plot_screen/book_plot.dart';
 import '/Add_associate/add_associate_screen.dart';
+import '/Add_associate/FLOOW-VIEW.DART.dart';
 import '/emoloyee_file/profile_screen.dart';
 import '/Add_associate/add_associate_list_screen.dart';
 import '/emoloyee_file/attendence_record.dart';
@@ -20,6 +21,7 @@ import'/DirectLogin/add_visitor_list_screen.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/service/profile_service.dart';
+import '/service/notification_service.dart';
 import '/Model/profile_model.dart';
 import '/Model/attendance_summary.dart';
 import '/Model/add_history_screen.dart';
@@ -30,6 +32,7 @@ import '/service/booking service.dart' as plot_service;
 import '/EmployeeDashboard/attendanceHistory.dart';
 import '/screens/banner_management_screen.dart';
 import'/changepassword.dart';
+import 'add_visitor_list_screendr.dart';
 
 class DirectloginPage extends StatefulWidget {
   final String? userName; // ✅ Added
@@ -355,7 +358,7 @@ class _DirectloginPageState extends State<DirectloginPage>
               _buildDrawerItem(
                 icon: Icons.today_rounded,
                 title: "Add visitor list",
-                onTap: () => _navigateTo(const VisitorListScreen ()),
+                onTap: () => _navigateTo(const VisitorListScreenddr()),
               ),
               _buildDrawerItem(
                 icon: Icons.today_rounded,
@@ -875,18 +878,30 @@ class _DirectloginPageState extends State<DirectloginPage>
                   },
                 ),
                 const SizedBox(width: 12),
-                _buildActionButton(
-                  "Associate List",
-                  Icons.list_alt_rounded,
-                  Colors.purple,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AssociateListScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(width: 12),
+              _buildActionButton(
+                "Associate List",
+                Icons.list_alt_rounded,
+                Colors.purple,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AssociateListScreen()),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              _buildActionButton(
+                "Follow-ups",
+                Icons.timeline,
+                Colors.deepPurple,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => WeekFlowupPage()),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
               ],
 
               const SizedBox(width: 12),
@@ -900,6 +915,34 @@ class _DirectloginPageState extends State<DirectloginPage>
                       context,
                       MaterialPageRoute(builder: (context) => const StaffListScreen()),
                     );
+                  },
+                ),
+                const SizedBox(width: 12),
+                _buildActionButton(
+                  "Test Notification",
+                  Icons.notifications_active,
+                  Colors.orange,
+                  onTap: () async {
+                    try {
+                      await NotificationService().testNotification();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Test notification sent! Check your notifications.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(width: 12),

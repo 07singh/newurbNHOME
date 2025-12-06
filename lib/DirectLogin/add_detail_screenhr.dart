@@ -107,7 +107,7 @@ class DayBookDetailScreenhr extends StatelessWidget {
         elevation: 0,
         backgroundColor: const Color(0xFF3371F4),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           "${entry.employeeName ?? 'Employee'}'s Day Book",
           style: const TextStyle(
@@ -119,7 +119,7 @@ class DayBookDetailScreenhr extends StatelessWidget {
       ),
 
       body: Container(
-        color: Colors.black,
+        color: Colors.white,
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
@@ -131,8 +131,8 @@ class DayBookDetailScreenhr extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
-                      Color(0xff7F00FF),
-                      Color(0xffE100FF),
+                      Color(0xff3371f4),
+                      Color(0xff3371f4),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

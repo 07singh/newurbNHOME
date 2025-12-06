@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '/Model/add_history_screen.dart';
 import '/service/add_histroy_services.dart';
 import '/DirectLogin/add_detail_screen.dart';
+import'/DirectLogin/add_detail_screenhr.dart';
 
 class DayBookHistoryScreenhr extends StatefulWidget {
   const DayBookHistoryScreenhr({super.key});
@@ -30,7 +31,7 @@ class _DayBookHistoryScreenhrState extends State<DayBookHistoryScreenhr> {
         elevation: 0,
         backgroundColor: const Color(0xFF3371F4), // Gold Color
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Day Book History',
           style: TextStyle(
@@ -138,7 +139,7 @@ class _DayBookHistoryScreenhrState extends State<DayBookHistoryScreenhr> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => DayBookDetailScreen(entry: entry),
+                                  builder: (_) => DayBookDetailScreenhr(entry: entry),
                                 ),
                               );
                             },

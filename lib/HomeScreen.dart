@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '/emoloyee_file/profile_screenforemployee.dart';
 import 'DirectLogin/add_visitorem.dart' show AddVisitorScreenem;
 import 'EmployeeDashboard/attendanceHistory.dart';
@@ -16,7 +17,9 @@ import 'week_flowup_page.dart';
 import '/service/auth_manager.dart';
 import '/service/attendance_manager.dart';
 import '/service/banner_service.dart';
+import '/service/attendancerecordService.dart';
 import '/Model/banner_model.dart';
+import '/Model/AttendanceRecord.dart';
 import '/Employ.dart';
 import'/ChangePasswordScreenem.dart';
 
@@ -41,6 +44,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final List<String> _bannerImageUrls = [];
   final BannerService _bannerService = BannerService();
+  final AttendanceService _attendanceService = AttendanceService();
   bool _isLoadingBanners = true;
   bool _isFetchingBanners = false;
 
@@ -54,6 +58,16 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _userRole;
   String? _profileImageUrl;
   String? _userPhone;
+
+  // Attendance summary (per employee, per month)
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  bool _isLoadingAttendanceSummary = false;
+  String? _attendanceSummaryError;
+  int _totalDaysInMonth = 0;
+  int _presentDays = 0;
+  int _absentDays = 0;
+  int _leaveDays = 0;
+  List<AttendanceRecord> _allAttendanceRecords = [];
 
   @override
   void initState() {
@@ -207,6 +221,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _userPhone = phone ?? widget.userPhone ?? '';
       _profileImageUrl = imageUrl ?? widget.profileImageUrl;
     });
+
+    // After we know the user's phone, load their monthly attendance summary
+    if (_userPhone != null && _userPhone!.isNotEmpty) {
+      await _loadAttendanceSummary();
+    }
   }
 
   Future<void> _handleRefresh() async {
@@ -219,6 +238,102 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isRefreshing = false;
       });
+    }
+  }
+
+  Future<void> _loadAttendanceSummary() async {
+    if (_userPhone == null || _userPhone!.isEmpty) return;
+
+    setState(() {
+      _isLoadingAttendanceSummary = true;
+      _attendanceSummaryError = null;
+    });
+
+    try {
+      final response = await _attendanceService.getAttendanceRecords();
+      _allAttendanceRecords = response.data;
+
+      _recalculateAttendanceSummary();
+    } catch (e) {
+      setState(() {
+        _attendanceSummaryError = 'Unable to load attendance summary';
+        _totalDaysInMonth = 0;
+        _presentDays = 0;
+        _absentDays = 0;
+        _leaveDays = 0;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingAttendanceSummary = false;
+        });
+      }
+    }
+  }
+
+  void _recalculateAttendanceSummary() {
+    if (_userPhone == null || _userPhone!.isEmpty) return;
+
+    final year = _selectedMonth.year;
+    final month = _selectedMonth.month;
+
+    // Filter records for this employee and selected month
+    final recordsForUserAndMonth = _allAttendanceRecords.where((record) {
+      return record.empMob == _userPhone &&
+          record.createDate.year == year &&
+          record.createDate.month == month;
+    }).toList();
+
+    // Use sets of days so multiple records per day count once
+    final Set<DateTime> presentDays = {};
+    final Set<DateTime> absentDays = {};
+    final Set<DateTime> leaveDays = {};
+
+    DateTime _dayKey(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+    for (final record in recordsForUserAndMonth) {
+      final day = _dayKey(record.createDate);
+      final status = (record.status ?? '').toLowerCase();
+
+      if (status.contains('leave')) {
+        leaveDays.add(day);
+      } else if (status.contains('absent')) {
+        absentDays.add(day);
+      } else {
+        // Treat anything else as present
+        presentDays.add(day);
+      }
+    }
+
+    final totalDistinctDays =
+        presentDays.union(absentDays).union(leaveDays).length;
+
+    setState(() {
+      _totalDaysInMonth = totalDistinctDays;
+      _presentDays = presentDays.length;
+      _absentDays = absentDays.length;
+      _leaveDays = leaveDays.length;
+    });
+  }
+
+  Future<void> _pickMonth() async {
+    final initialDate = _selectedMonth;
+    final firstDate = DateTime(initialDate.year - 1, 1);
+    final lastDate = DateTime(initialDate.year + 1, 12, 31);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: 'Select month',
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedMonth = DateTime(picked.year, picked.month);
+      });
+      _recalculateAttendanceSummary();
     }
   }
 
@@ -699,14 +814,36 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // Attendance Summary
-            Text(
-              'Attendance Summary',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple.shade700,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Attendance Summary',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple.shade700,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _pickMonth,
+                  icon: const Icon(Icons.calendar_month, size: 18),
+                  label: Text(
+                    DateFormat('MMM yyyy').format(_selectedMonth),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
             ),
+            if (_isLoadingAttendanceSummary)
+              const LinearProgressIndicator(minHeight: 3),
+            if (_attendanceSummaryError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _attendanceSummaryError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 12),
             GridView.count(
               shrinkWrap: true,
@@ -716,10 +853,10 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSpacing: 12,
               childAspectRatio: 1.5, // Adjusted to prevent overflow
               children: [
-                _buildSummaryCard('Total Days', '22', Colors.deepPurple),
-                _buildSummaryCard('Present', '20', Colors.green),
-                _buildSummaryCard('Absent', '2', Colors.red),
-                _buildSummaryCard('Leave', '1', Colors.orange),
+                _buildSummaryCard('Total Days', _totalDaysInMonth.toString(), Colors.deepPurple),
+                _buildSummaryCard('Present', _presentDays.toString(), Colors.green),
+                _buildSummaryCard('Absent', _absentDays.toString(), Colors.red),
+                _buildSummaryCard('Leave', _leaveDays.toString(), Colors.orange),
               ],
             ),
           ],

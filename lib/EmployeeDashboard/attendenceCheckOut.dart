@@ -487,23 +487,23 @@ class _AttendanceCheckOutState extends State<AttendanceCheckOut> {
       onWillPop: () async => !_isCheckingOut,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.deepPurple,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF6B46FF)),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: _isCheckingOut ? null : () => Navigator.pop(context),
           ),
           title: const Text(
             'Attendance',
             style: TextStyle(
-              color: Color(0xFF6B46FF),
+              color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
           ),
           centerTitle: true,
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh, color: Color(0xFF6B46FF)),
+              icon: const Icon(Icons.refresh, color: Colors.white),
               onPressed: _isCheckingOut ? null : _initLocation,
               tooltip: 'Refresh Location',
             ),

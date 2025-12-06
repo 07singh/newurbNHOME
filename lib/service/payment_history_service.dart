@@ -7,12 +7,18 @@ class PaymentHistoryService {
   static const String baseUrl = 'https://realapp.cheenu.in';
   static const Duration _timeout = Duration(seconds: 30);
 
-  /// Fetches payment history from the API
-  Future<List<Payment>> fetchPaymentHistory() async {
+  /// Fetches payment history from the API.
+  /// When [bookingId] is provided, calls `/Api/PaymentHistory?bookingId=<id>`.
+  /// Otherwise falls back to `/Api/AddPaymentHistory`.
+  Future<List<Payment>> fetchPaymentHistory({int? bookingId}) async {
+    final endpoint = bookingId != null
+        ? '/Api/PaymentHistory?bookingId=$bookingId'
+        : '/Api/AddPaymentHistory';
+
     try {
       final response = await http
           .get(
-            Uri.parse('$baseUrl/Api/AddPaymentHistory'),
+            Uri.parse('$baseUrl$endpoint'),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -21,14 +27,22 @@ class PaymentHistoryService {
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body) as Map<String, dynamic>;
-        final apiResponse = PaymentHistoryResponse.fromJson(jsonResponse);
-        
+        final jsonResponse = json.decode(response.body);
+
+        if (bookingId != null) {
+          final historyList = _extractPaymentHistoryList(jsonResponse);
+          return historyList
+              .map((item) => Payment.fromJson(item, bookingIdOverride: bookingId))
+              .toList();
+        }
+
+        final apiResponse = PaymentHistoryResponse.fromJson(jsonResponse as Map<String, dynamic>);
+
         if (apiResponse.status == 'Success') {
           return apiResponse.data;
         } else {
-          throw Exception(apiResponse.message.isNotEmpty 
-              ? apiResponse.message 
+          throw Exception(apiResponse.message.isNotEmpty
+              ? apiResponse.message
               : 'Failed to fetch payment history');
         }
       } else {
@@ -41,5 +55,36 @@ class PaymentHistoryService {
     } catch (e) {
       throw Exception('Error: ${e.toString()}');
     }
+  }
+
+  List<Map<String, dynamic>> _extractPaymentHistoryList(dynamic jsonResponse) {
+    Map<String, dynamic>? root;
+    if (jsonResponse is Map<String, dynamic>) {
+      root = jsonResponse;
+    } else {
+      return [];
+    }
+
+    List<Map<String, dynamic>>? tryExtract(Map<String, dynamic> source) {
+      const keys = ['payment_history', 'Payment_History', 'paymenthistory', 'PaymentHistory'];
+      for (final key in keys) {
+        final value = source[key];
+        if (value is List) {
+          return value.whereType<Map<String, dynamic>>().toList();
+        }
+      }
+      return null;
+    }
+
+    final direct = tryExtract(root);
+    if (direct != null) return direct;
+
+    final dataValue = root['data'];
+    if (dataValue is Map<String, dynamic>) {
+      final fromData = tryExtract(dataValue);
+      if (fromData != null) return fromData;
+    }
+
+    return [];
   }
 }

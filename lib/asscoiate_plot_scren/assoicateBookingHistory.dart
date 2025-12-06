@@ -43,7 +43,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
 
   void _loadPaymentHistory() {
     setState(() {
-      _futurePayments = _service.fetchPaymentHistory();
+      _futurePayments = _service.fetchPaymentHistory(bookingId: widget.bookingid);
     });
   }
 

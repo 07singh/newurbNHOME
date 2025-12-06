@@ -36,6 +36,9 @@ class _AddVisitorScreenState extends State<AddVisitorScreen> {
           const SnackBar(content: Text('Visitor added successfully')),
         );
         _formKey.currentState!.reset();
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) Navigator.pop(context, true);
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to add visitor')),

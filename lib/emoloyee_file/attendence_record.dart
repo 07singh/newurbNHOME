@@ -80,17 +80,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Attendance Records',
           style: TextStyle(
-            color: Colors.black, // Black text color
-            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        backgroundColor: Colors.yellow, // Yellow background
-        foregroundColor: Colors.black, // Black for back button and icons
+        centerTitle: true,
+        backgroundColor: Colors.deepPurple,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black), // Black icons
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [

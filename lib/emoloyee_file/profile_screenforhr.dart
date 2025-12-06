@@ -140,12 +140,12 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.white,
         centerTitle: true,
         title: const Text(
           "Profile Details",
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.w600,
             fontSize: 22,
           ),
@@ -216,7 +216,7 @@ class _ProfileScreenhrState extends State<ProfileScreenhr> {
                         ],
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 15),
 
                       if (_pickedImage != null)
                         ElevatedButton(
